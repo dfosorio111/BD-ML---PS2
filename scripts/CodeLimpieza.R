@@ -7,8 +7,6 @@ rm(list=ls())
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning/BD-ML---PS2/data")
 #Diego
 setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
-
-
 #Samuel
 setwd()
 
@@ -20,7 +18,7 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
        vtable, stargazer, ggplot2, boot, MLmetrics, lfe, 
        tidyverse, fabricatr, stargazer, Hmisc, writexl, viridis, here)
 
-#Importar archivos Daniel 
+#Importar archivos
 train_hogares <- readRDS("train_hogares.Rds")
 train_personas <- readRDS("train_personas.Rds")
 test_hogares <- readRDS("test_hogares.Rds")
@@ -34,12 +32,6 @@ test_hogares <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/da
 train_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/train_personas.Rds")
 test_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/test_personas.Rds")
 
-
-#Importar archivos Samuel
-#
-#
-#
-#
 
 
 
@@ -61,6 +53,7 @@ names(train_personas)
 
 
 #Construir pobrezaMonetaria porque "pobre" hace referencia a pobreza extrema
+####Esto de aca son solo pruebas, no hay que volver a correrlo
 train_hogares <- train_hogares%>%mutate(prueba_pobreza = ifelse(Ingpcug < Li, 1, 0))
 train_hogares <- train_hogares%>%mutate(test1 = ifelse(Pobre == prueba_pobreza, TRUE, FALSE))
 train_hogares%>%count(test1)
@@ -92,22 +85,54 @@ train_p_edadjefe <- train_p%>%subset(P6050==1)%>%select(id, P6040)
 #Jefe del hogar cotiza a seguridad social
 train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(jefe_cotiza=ifelse(is.na(P6090),9,P6090))
 
-#***Maximo nivel educactivo en el hogar
+#relación laboral:P6430
+# 
+train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )%>%select(id, relab_jefe)  #ifelse(Des==1,10,11)     
 
-train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)%>%summarise(max_edu_lev_h = max(P6210))
+
+#Subsidio familiar
+train_p%>%subset(P6050==1)%>%count(P6585s3)
+
+#Subsidio educativo
+train_p%>%subset(P6050==1)%>%count(P6585s4)
+train_p%>%subset(P6050==1)%>%count(Oc, P6585s3)
 
 
-#oficio del jefe del hogar
+#oficio del jefe del hogar (No se está usando)
 #NA 47584 
 train_p_jefeofi <- train_p%>%subset(P6050==1)%>%select(id, Oficio)
 
-#relación laboral:P6430
-# 
-train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )  #ifelse(Des==1,10,11)     
 
+#Horas totales trabajadas
+train_p_horas <- train_p%>%mutate(Horas_reales = ifelse(is.na(Oc), 0, P6800))%>%group_by(id)%>%summarise(Horas_Hogar = sum(Horas_reales))
+
+train_p_horas_jefe <- train_p%>%mutate(Horas_reales = ifelse(is.na(Oc), 0, P6800))%>%subset(P6050==1)%>%select(id, Horas_reales)
+
+union_horas <- full_join(train_p_horas, train_p_horas_jefe)
+View(union_horas)
+
+
+is.na(train_p_horas$P6800)%>%table()
+
+View(train_p_horas%>%select(id, Oc, P6800, Horas_reales))
+
+#***Maximo nivel educactivo en el hogar
+
+train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)%>%summarise(max_edu_lev_h = max(P6210))
 
 
 
 
 
 #Merge de personas y hogares
+
+train_completa <- train_h
+train_completa <- full_join(train_completa, train_p_num_muj)
+train_completa <- full_join(train_completa, train_p_jef_muj)
+train_completa <- full_join(train_completa, train_p_edadjefe)
+train_completa <- full_join(train_completa, train_p_jefecotiza)
+train_completa <- full_join(train_completa, train_p_jef_ocu)
+train_completa <- full_join(train_completa, union_horas)
+
+write.csv(train_completa, "train_completa.csv")
+
