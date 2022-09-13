@@ -92,11 +92,18 @@ train_p_edadjefe <- train_p%>%subset(P6050==1)%>%select(id, P6040)
 #Jefe del hogar cotiza a seguridad social
 train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(jefe_cotiza=ifelse(is.na(P6090),9,P6090))
 
-#Maximo nivel educactivo en el hogar
+#***Maximo nivel educactivo en el hogar
 
 train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)%>%summarise(max_edu_lev_h = max(P6210))
 
 
+#oficio del jefe del hogar
+#NA 47584 
+train_p_jefeofi <- train_p%>%subset(P6050==1)%>%select(id, Oficio)
+
+#relación laboral:P6430
+# 
+train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )  #ifelse(Des==1,10,11)     
 
 
 
