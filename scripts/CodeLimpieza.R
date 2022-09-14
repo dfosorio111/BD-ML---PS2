@@ -71,8 +71,10 @@ train_p <- train_personas[names(test_personas)]
 
 
 #Creación de variables de nivel hogar en base personas
-#Número de mujeres por hogar
+#Base de 
 train_p <- train_p%>%mutate(mujer = P6020 - 1)
+
+#Número de mujeres por hogar
 train_p_num_muj <- train_p%>%group_by(id)%>%summarise(num_mujeres = sum(mujer))
 
 #Jefe de hogar es mujer?
@@ -85,7 +87,7 @@ train_p_edadjefe <- train_p%>%subset(P6050==1)%>%select(id, P6040)
 #Jefe del hogar cotiza a seguridad social
 train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(jefe_cotiza=ifelse(is.na(P6090),9,P6090))
 
-#relación laboral:P6430
+#relación laboral:P6430 del jefe del hogar
 # 
 train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )%>%select(id, relab_jefe)  #ifelse(Des==1,10,11)     
 
@@ -103,22 +105,31 @@ train_p%>%subset(P6050==1)%>%count(Oc, P6585s3)
 train_p_jefeofi <- train_p%>%subset(P6050==1)%>%select(id, Oficio)
 
 
-#Horas totales trabajadas
+#Horas totales trabajadas en el hogar
 train_p_horas <- train_p%>%mutate(Horas_reales = ifelse(is.na(Oc), 0, P6800))%>%group_by(id)%>%summarise(Horas_Hogar = sum(Horas_reales))
 
+#Horas trabajadas por el jefe
 train_p_horas_jefe <- train_p%>%mutate(Horas_reales = ifelse(is.na(Oc), 0, P6800))%>%subset(P6050==1)%>%select(id, Horas_reales)
 
 union_horas <- full_join(train_p_horas, train_p_horas_jefe)
-View(union_horas)
-
-
-is.na(train_p_horas$P6800)%>%table()
 
 View(train_p_horas%>%select(id, Oc, P6800, Horas_reales))
 
-#***Maximo nivel educactivo en el hogar
 
-train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)%>%summarise(max_edu_lev_h = max(P6210))
+
+#Maximo nivel educactivo en el hogar
+train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)%>%summarise(max_edu_lev_h = max(as.numeric(P6210)) ) 
+
+
+#Numero de empleados 
+
+train_p_num_empl <- train_p%>%mutate(num_empleados= ifelse(is.na(P6870), 0, P6870))%>%group_by(id)%>%summarise(max_empl= max(as.numeric(num_empleados)))
+
+
+
+
+
+
 
 
 
@@ -134,5 +145,12 @@ train_completa <- full_join(train_completa, train_p_jefecotiza)
 train_completa <- full_join(train_completa, train_p_jef_ocu)
 train_completa <- full_join(train_completa, union_horas)
 
+train_completa <- read.csv("train_completa.csv")
 write.csv(train_completa, "train_completa.csv")
+
+
+
+
+
+
 
