@@ -95,7 +95,7 @@ train_p_edadjefe <- train_p%>%subset(P6050==1)%>%select(id, P6040)
 train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(jefe_cotiza=ifelse(is.na(P6090),9,P6090))
 
 #relación laboral:P6430 del jefe del hogar
-# 
+#Tal vez la otra es mejor
 train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )%>%select(id, relab_jefe)  #ifelse(Des==1,10,11)     
 
 
@@ -105,6 +105,7 @@ train_p%>%subset(P6050==1)%>%count(P6585s3)
 #Subsidio educativo
 train_p%>%subset(P6050==1)%>%count(P6585s4)
 train_p%>%subset(P6050==1)%>%count(Oc, P6585s3)
+#Las de subsidios tienen muchos NA
 
 
 #oficio del jefe del hogar (No se está usando)
@@ -125,21 +126,37 @@ View(train_p_horas%>%select(id, Oc, P6800, Horas_reales))
 
 
 #Maximo nivel educactivo en el hogar
-train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)%>%summarise(max_edu_lev_h = max(as.numeric(P6210)) ) 
+train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%mutate(Nivel_Educ = ifelse(as.numeric(P6210) == 9,0,as.numeric(P6210)))%>%group_by(id)%>%summarise(max_edu_lev_h = max(as.numeric(Nivel_Educ)) ) 
 
 
-#Numero de empleados 
-
+#Máximo tamaño de empresa del hogar
 train_p_num_empl <- train_p%>%mutate(num_empleados= ifelse(is.na(P6870), 0, P6870))%>%group_by(id)%>%summarise(max_empl= max(as.numeric(num_empleados)))
 
 
+#Sacar el número de ocupados dentro del hogar (Para posteriormente sacar la proporción de ocupados)
+Ocupados_Hogar <- train_p%>%mutate(Ocupados = ifelse(is.na(Oc),0,Oc))%>%group_by(id)%>%summarise(Num_ocu_hogar = sum(Ocupados))
 
 
+#Se busca hacer un "pivot" de aquellas variables que pueden resultar útil tener para más de un individuo del hogar
+
+#Inicialmente con la relación laboral
+train_relab <- train_p%>%mutate(relacion_lab = if_else(is.na(P6430),0,as.double(P6430)))%>%select(id, Orden, relacion_lab)
+reshape_relab <- pivot_wider(train_relab, names_from = Orden, values_from = relacion_lab)
+
+#Nivel educativo
+train_educ <- train_p%>%mutate(educacion = if_else(is.na(P6210),0,as.double(P6210)))%>%select(id, Orden, educacion)
+reshape_educ <- pivot_wider(train_educ, names_from = Orden, values_from = educacion)
 
 
+####Corrección máximo nivel educativo, creación de ocupados por hogar, creación de los 2 reshapes
 
 
-
+#Intento de pensión
+train_p%>%subset(P6040 >= 18)%>%count(P7500s2, P6920)
+train_pension <- train_p%>%mutate(cotiza_recibe = ifelse(P6920 == 1 | P6920 == 3 | P7500s2 == 1, 1,0))%>%select(id, Orden, cotiza_recibe)
+train_pension$cotiza_recibe <- ifelse(is.na(train_pension$cotiza_recibe ), 0, train_pension$cotiza_recibe )
+train_pension%>%count(cotiza_recibe)
+reshape_pension <- pivot_wider(train_pension, names_from = Orden, values_from = cotiza_recibe)
 
 
 #Merge de personas y hogares
