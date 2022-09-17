@@ -8,7 +8,7 @@ setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Lear
 #Diego
 setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
 #Samuel
-setwd()
+setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2")
 
 #Se establece semilla
 set.seed(1000)
@@ -33,6 +33,13 @@ train_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/
 test_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/test_personas.Rds")
 
 
+#Importar archivos Samuel
+
+train_hogares <- readRDS("data/train_hogares.Rds")
+test_hogares <- readRDS("data/test_hogares.Rds")
+
+train_personas <- readRDS("data/train_personas.Rds")
+test_personas <- readRDS("data/test_personas.Rds")
 
 
 #Variables que pueden sonarnos:
