@@ -252,7 +252,7 @@ test_completa <- full_join(test_completa, test_p_union_horas)
 # escribir la base en archivo .csv
 write.csv(test_completa, "test_hogares.csv")
 # leer la base del archivo .csv
-train_hogares <- read.csv("test_hogares.csv")
+test_hogares <- read.csv("test_hogares.csv")
 
 
 
