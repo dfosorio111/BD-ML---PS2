@@ -6,7 +6,7 @@ rm(list=ls())
 #Daniel
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning/BD-ML---PS2/data")
 #Diego
-setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
+setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data")
 #Samuel
 setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2")
 
@@ -71,21 +71,24 @@ train_hogares%>%count(tets)
 #Con lo anterior comprobamos que Pobre es 1 si el ingreso per capita del hogar es menor a la linea de pobreza y 0 dlc
 
 
-#Base para clasificación hogares
+#Base para clasificación a nivel hogares
 train_h <- train_hogares[names(test_hogares)]
+#crear la variable de prediccion Pobre
 train_h$Pobre <- train_hogares$Pobre
+
+
+
+#Base a nivel personas 
 train_p <- train_personas[names(test_personas)]
 
+#Creación de variables a nivel hogar de la base personas
 
-
-#Creación de variables de nivel hogar en base personas
-#Base de 
 train_p <- train_p%>%mutate(mujer = P6020 - 1)
 
 #Número de mujeres por hogar
 train_p_num_muj <- train_p%>%group_by(id)%>%summarise(num_mujeres = sum(mujer))
 
-#Jefe de hogar es mujer?
+#Jefe de hogar es mujer (0-1)
 train_p <- train_p%>%mutate(jefe_y_mujer = ifelse(mujer == 1 & P6050 == 1, 1, 0))
 train_p_jef_muj <- train_p%>%group_by(id)%>%summarise(jefe_mujer = sum(jefe_y_mujer))
 
@@ -95,10 +98,8 @@ train_p_edadjefe <- train_p%>%subset(P6050==1)%>%select(id, P6040)
 #Jefe del hogar cotiza a seguridad social
 train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(jefe_cotiza=ifelse(is.na(P6090),9,P6090))
 
-#relación laboral:P6430 del jefe del hogar
-# 
+#relab: relación laboral:P6430 del jefe del hogar
 train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )%>%select(id, relab_jefe)  #ifelse(Des==1,10,11)     
-
 
 #Subsidio familiar
 train_p%>%subset(P6050==1)%>%count(P6585s3)
@@ -134,16 +135,7 @@ train_p_adulto_maxlev_edu <-train_p%>%subset(is.na(P6210)==FALSE)%>%group_by(id)
 train_p_num_empl <- train_p%>%mutate(num_empleados= ifelse(is.na(P6870), 0, P6870))%>%group_by(id)%>%summarise(max_empl= max(as.numeric(num_empleados)))
 
 
-
-
-
-
-
-
-
-
-
-#Merge de personas y hogares
+#Merge: unir bases a nivel hogar y bases de personas a nivel del hogar
 
 train_completa <- train_h
 train_completa <- full_join(train_completa, train_p_num_muj)
@@ -155,9 +147,12 @@ train_completa <- full_join(train_completa, union_horas)
 
 
 # escribir la base en archivo .csv
-write.csv(train_hogares, "train_hogares.csv")
+write.csv(train_completa, "train_hogares.csv")
 # leer la base del archivo .csv
 train_hogares <- read.csv("train_hogares.csv")
+
+
+
 
 
 # crear la variable "Pobre" test_h
@@ -183,6 +178,7 @@ test_h$Pobre <- test_hogares$Pobre
 
 #Base para clasificación hogares
 test_h <- train_hogares[names(test_hogares)]
+
 test_p <- train_personas[names(test_personas)]
 
 
@@ -244,13 +240,19 @@ test_p_num_empl <- test_p%>%mutate(num_empleados= ifelse(is.na(P6870), 0, P6870)
 
 #Merge de personas y hogares: unir las variables de la base de hogares y personas a nivel de hogares
 
-test_completa <- train_h
+test_completa <- test_h
 test_completa <- full_join(test_completa, test_p_num_muj)
 test_completa <- full_join(test_completa, test_p_jef_muj)
 test_completa <- full_join(test_completa, test_p_edadjefe)
 test_completa <- full_join(test_completa, test_p_jefecotiza)
 test_completa <- full_join(test_completa, test_p_jef_ocu)
 test_completa <- full_join(test_completa, test_p_union_horas)
+
+
+# escribir la base en archivo .csv
+write.csv(test_completa, "test_hogares.csv")
+# leer la base del archivo .csv
+train_hogares <- read.csv("test_hogares.csv")
 
 
 
