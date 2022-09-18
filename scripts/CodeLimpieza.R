@@ -95,7 +95,7 @@ train_p_edadjefe <- train_p%>%subset(P6050==1)%>%select(id, P6040)
 train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(jefe_cotiza=ifelse(is.na(P6090),9,P6090))
 
 #relación laboral:P6430 del jefe del hogar
-#Tal vez la otra es mejor
+#10 es desocupado y 11 es inactivo
 train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )%>%select(id, relab_jefe)  #ifelse(Des==1,10,11)     
 
 
@@ -135,29 +135,110 @@ train_p_num_empl <- train_p%>%mutate(num_empleados= ifelse(is.na(P6870), 0, P687
 
 #Sacar el número de ocupados dentro del hogar (Para posteriormente sacar la proporción de ocupados)
 Ocupados_Hogar <- train_p%>%mutate(Ocupados = ifelse(is.na(Oc),0,Oc))%>%group_by(id)%>%summarise(Num_ocu_hogar = sum(Ocupados))
+#Número de desocupados
+Desocupados_Hogar <- train_p%>%mutate(Desocupados = ifelse(is.na(Des),0,Des))%>%group_by(id)%>%summarise(Num_des_hogar = sum(Desocupados))
+#Cantidad de personas en edad de trabajar
+Pet_Hogar <- train_p%>%mutate(PobEdTrab = ifelse(is.na(Pet),0,Pet))%>%group_by(id)%>%summarise(Num_pet_hogar = sum(PobEdTrab))
+
 
 
 #Se busca hacer un "pivot" de aquellas variables que pueden resultar útil tener para más de un individuo del hogar
 
+if_else(is.na(P6430),if_else(is.na(Des), 11, 12),as.double(P6430))
+
+
+
 #Inicialmente con la relación laboral
-train_relab <- train_p%>%mutate(relacion_lab = if_else(is.na(P6430),0,as.double(P6430)))%>%select(id, Orden, relacion_lab)
-reshape_relab <- pivot_wider(train_relab, names_from = Orden, values_from = relacion_lab)
+#10 hace referencia a individuos estudiando, 11 a inactivos no estudiando, 12 a desocupados
+train_relab <- train_p%>%mutate(relacion_lab = ifelse(as.numeric(P6240) == 3, 10, if_else(is.na(P6430),if_else(is.na(Des), 11, 12),as.double(P6430))))%>%select(id, Orden, relacion_lab, Oc, Des, Ina, P6430, P6240, P6040, P6050)
+#Los niños no clasifican a nada, se les dará valor de 13
+train_relab$relacion_lab <- ifelse(is.na(train_relab$relacion_lab), 13, train_relab$relacion_lab)
+prueba <- train_relab%>%subset(relacion_lab == 13)
+max(prueba$P6040)
+train_relab_def <- train_relab%>%select(id, Orden, relacion_lab)
+reshape_relab <- pivot_wider(train_relab_def, names_from = Orden, values_from = relacion_lab)
+
+reshape_relab <- reshape_relab%>%select("id", `1`, `2`, `3`)
+#Los NA son gente que no existe, esos no existe se les dará valor de 0
+reshape_relab$`2` <- ifelse(is.na(reshape_relab$`2`),0,reshape_relab$`2`)
+reshape_relab$`3` <- ifelse(is.na(reshape_relab$`3`),0,reshape_relab$`3`)
+
+colnames(reshape_relab) <- c("id", "Relab1", "Relab2", "Relab3")
 
 #Nivel educativo
-train_educ <- train_p%>%mutate(educacion = if_else(is.na(P6210),0,as.double(P6210)))%>%select(id, Orden, educacion)
+#Los NA del nivel educativo se ponen 0 porque todos hacen referencia a personas menores de edad no ocupados se les dará un valor de 10 (da igual porque es categórica.
+
+train_p%>%subset(P6040 >= 18)%>%count(P6210)
+train_p%>%subset(Oc == 1)%>%count(P6210)
+
+
+train_educ <- train_p%>%mutate(educacion = if_else(is.na(P6210),10,as.double(P6210)))%>%select(id, Orden, educacion)
+is.na(train_educ$educacion)%>%table()
 reshape_educ <- pivot_wider(train_educ, names_from = Orden, values_from = educacion)
 
+#También arbitrariamente se escogen los 3 primeros
+reshape_educ <- reshape_educ%>%select("id", `1`, `2`, `3`)
 
-####Corrección máximo nivel educativo, creación de ocupados por hogar, creación de los 2 reshapes
+#Los NA son gente que no existe, esos no existe se les dará valor de 0
+reshape_educ$`2` <- ifelse(is.na(reshape_educ$`2`),0,reshape_educ$`2`)
+reshape_educ$`3` <- ifelse(is.na(reshape_educ$`3`),0,reshape_educ$`3`)
+
+colnames(reshape_educ) <- c("id", "Educ1", "Educ2", "Educ3")
 
 
-#Intento de pensión
+
+#Variable de pensión
 train_p%>%subset(P6040 >= 18)%>%count(P7500s2, P6920)
+
 train_pension <- train_p%>%mutate(cotiza_recibe = ifelse(P6920 == 1 | P6920 == 3 | P7500s2 == 1, 1,0))%>%select(id, Orden, cotiza_recibe)
 train_pension$cotiza_recibe <- ifelse(is.na(train_pension$cotiza_recibe ), 0, train_pension$cotiza_recibe )
 train_pension%>%count(cotiza_recibe)
 reshape_pension <- pivot_wider(train_pension, names_from = Orden, values_from = cotiza_recibe)
+reshape_pension$Cant_cotiza_recibe <- apply(reshape_pension[2:ncol(reshape_pension)],1,sum, na.rm = TRUE) 
 
+reshape_pension <- reshape_pension%>%select("id", "Cant_cotiza_recibe")
+
+
+train_p%>%subset(Des == 1)%>%count(P7310)
+
+
+#En el paper de Samu utilizan el estatus marital de la personas jefe de hogar
+#Acá eso no se puede, pero podemos saber si la persona jefe de hogar vive con su pareja, hijos o nietos
+train_p%>%count(P6050)
+
+train_miembros <- train_p%>%select(id, Orden, P6050) 
+reshape_miembros <- pivot_wider(train_miembros, names_from = Orden, values_from = P6050)
+
+reshape_miembros$hijos <- 0
+reshape_miembros$pareja <- 0
+reshape_miembros$nietos <- 0
+reshape_miembros$otros_parientes <- 0
+reshape_miembros$no_parientes <- 0
+reshape_miembros$emp_pen <- 0
+
+nombres <- c("2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22")
+for (i in 1:nrow(reshape_miembros)) {
+  for (j in nombres) {
+    if (is.na(reshape_miembros[i,j]) == FALSE) {
+      if (reshape_miembros[i,j] == 2) {
+        reshape_miembros$pareja[i] <- 1
+      }else if (reshape_miembros[i,j] == 3) {
+        reshape_miembros$hijos[i] <- 1
+      }else if (reshape_miembros[i,j] == 4) {
+        reshape_miembros$nietos[i] <- 1
+      }else if (reshape_miembros[i,j] == 5) {
+        reshape_miembros$otros_parientes[i] <- 1
+      }else if (reshape_miembros[i,j] == 9) {
+        reshape_miembros$no_parientes[i] <- 1
+      }else if (reshape_miembros[i,j] == 6 | reshape_miembros[i,j] == 7 | reshape_miembros[i,j] == 8) {
+        reshape_miembros$emp_pen[i] <- 1
+      }
+    }
+    
+  }
+}
+
+reshape_miembros <- reshape_miembros%>%select("id", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen")
 
 #Merge de personas y hogares
 
@@ -168,13 +249,73 @@ train_completa <- full_join(train_completa, train_p_edadjefe)
 train_completa <- full_join(train_completa, train_p_jefecotiza)
 train_completa <- full_join(train_completa, train_p_jef_ocu)
 train_completa <- full_join(train_completa, union_horas)
+train_completa <- full_join(train_completa, train_p_adulto_maxlev_edu)
+
+table(train_completa$Pobre, train_completa$max_edu_lev_h)
+
+#Hay solo 3 en No sabe, no responde, arbitrariamente los clasificaré en "Ninguno"
+train_completa$max_edu_lev_h <- ifelse(train_completa$max_edu_lev_h == 0, 1, train_completa$max_edu_lev_h)
+
+train_completa <- full_join(train_completa, train_p_num_empl)
+train_completa <- full_join(train_completa, Ocupados_Hogar)
+train_completa <- full_join(train_completa, Desocupados_Hogar)
+train_completa <- full_join(train_completa, Pet_Hogar)
+
+#Relación laboral de los primeros 3 miembros del hogar ¿Por qué 3? realmente porque ajá
+#10 estudiando, 11 inactivo no estudiando, 12 desocupado, 13 niños (no aplican)
+train_completa <- full_join(train_completa, reshape_relab)
+
+#Nivel educativo (se respetan las categorías originales, 10 es para NA y 0 para quienes no existen)
+train_completa <- full_join(train_completa, reshape_educ)
+
+#Se añade la cantidad de personas que cotiza o recibe pensión en el hogar
+train_completa <- full_join(train_completa, reshape_pension)
+
+#Seadiciona los miembros que viven con esas personas
+train_completa <- full_join(train_completa, reshape_miembros)
+
+
+
+#La P6090 tiene unos NA pero son niños, entonces se les pondrá que no están en seguridad social en salud
+train_completa%>%count(P6090)
+train_completa$P6090 <- ifelse(is.na(train_completa$P6090), 2, train_completa$P6090)
+
+#Variables de proporciones. (Más que la cantidad nos interesa la proporción)
+train_completa$prop_ocupados_total <- train_completa$Num_ocu_hogar/train_completa$Nper
+train_completa$prop_ocupados_pet <- train_completa$Num_ocu_hogar/train_completa$Num_pet_hogar
+
+ggplot(data = train_completa, aes(x = factor(Pobre), y = prop_ocupados_pet))+
+  geom_boxplot()
+
+
+train_completa$prop_Desocupados_total <- train_completa$Num_des_hogar/train_completa$Nper
+train_completa$prop_Desocupados_pet <- train_completa$Num_des_hogar/train_completa$Num_pet_hogar
+
+ggplot(data = train_completa, aes(x = factor(Pobre), y = prop_Desocupados_pet))+
+  geom_boxplot()
+
+train_completa%>%count(prop_Desocupados_pet)
+
+#Mujeres
+train_completa$prop_mujeres_total <- train_completa$num_mujeres/train_completa$Nper
+train_completa$prop_mujeres_pet <- train_completa$num_mujeres/train_completa$Num_pet_hogar
+
+ggplot(data = train_completa, aes(x = factor(Pobre), y = prop_mujeres_pet))+
+  geom_boxplot()
+
+
+ggplot(data = train_completa, aes(x = factor(Pobre), y = P6040))+
+  geom_boxplot()
+
 
 train_completa <- read.csv("train_completa.csv")
 write.csv(train_completa, "train_completa.csv")
 
+write.csv(reshape_miembros, "reshapemiembros.csv")
+reshape_miembros <- read.csv("reshapemiembros.csv")
 
+#Se anexan aquellas variables que faltaba anexar (Luego pasar esto arriba)
 
-
-
+setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning")
 
 
