@@ -16,28 +16,10 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
        vtable, stargazer, ggplot2, boot, MLmetrics, lfe, 
        tidyverse, fabricatr, stargazer, Hmisc, writexl, viridis, here)
 
-#Importar archivos
-train_hogares <- readRDS("train_hogares.Rds")
-train_personas <- readRDS("train_personas.Rds")
-test_hogares <- readRDS("test_hogares.Rds")
-test_personas <- readRDS("test_personas.Rds")
+##########################################################################
+##########################################################################
 
-
-#Importar archivos Diego
-train_hogares <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/train_hogares.Rds")
-test_hogares <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/test_hogares.Rds")
-
-train_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/train_personas.Rds")
-test_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/test_personas.Rds")
-
-
-#Importar archivos Samuel
-
-train_hogares <- readRDS("data/train_hogares.Rds")
-test_hogares <- readRDS("data/test_hogares.Rds")
-
-train_personas <- readRDS("data/train_personas.Rds")
-test_personas <- readRDS("data/test_personas.Rds")
+##Creo que se puede quitar
 
 #Construir pobrezaMonetaria porque "pobre" hace referencia a pobreza extrema
 ####Esto de aca son solo pruebas, no hay que volver a correrlo
@@ -122,4 +104,35 @@ stargazer(dftablaeduc$max_edu_lev_h, type = "html", title = "Estadísticas Descr
 #Numero de empleados 
 
 train_p_num_empl <- train_p%>%mutate(num_empleados= ifelse(is.na(P6870), 0, P6870))%>%group_by(id)%>%summarise(max_empl= max(as.numeric(num_empleados)))
+
+
+##########################################################################
+##########################################################################
+
+# Importar base de datos
+
+train_completa <- read.csv("train_completa.csv")
+
+train_completa_definitiva <- read.csv("data/train_completa_definitiva.csv")
+
+# Corrección educación
+
+train_completa_definitiva %>%
+  mutate(años_educ1 = case_when(Educ1 == 1 ~ 0,
+                                Educ1 == 2 ~ 5,
+                                Educ1 == 3 ~ 10,
+                                Educ1 == 4 ~ 14,
+                                Educ1 == 5 ~ 16,
+                                Educ1 == 6 ~ 21))
+
+
+
+
+
+
+
+
+
+
+
 
