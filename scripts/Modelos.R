@@ -26,7 +26,7 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
 data <- read.csv("train_completa.csv")
 names(data)
 data$Valor_Arriendo <- ifelse(is.na(data$P5130),data$P5140, data$P5130)
-data <- data[-c(1:3,10:12,15,17,19)]
+data <- data[-c(1:5,12:14,17,19,21)]
 
 #Las variables que son factores ponerlas como factores
 names(data)
@@ -61,6 +61,9 @@ data$emp_pen <- as.factor(data$emp_pen)
 data$prop_cotiza <- data$Cant_cotiza_recibe/data$Num_pet_hogar
 data$ppc <- data$Nper/data$P5010
 
+is.na(data$P5010)%>%table()
+data%>%count(P5010)
+
 
 names(data)
 
@@ -68,7 +71,7 @@ plot(data$ppc, log(data$Ingpcug))
 
 is.na(data$P5090)%>%table()
 
-data <- data[c("Lp","Pobre", "Clase", "jefe_mujer", "max_edu_lev_h", "max_empl", "Horas_Hogar", "P6040", "age2", "prop_ocupados_pet", "relab_jefe", "prop_cotiza", "Ingpcug", "Valor_Arriendo", "Relab2", "nietos", "no_parientes", "otros_parientes", "prop_mujeres_pet", "ppc", "P5090")]
+data <- data[c("Lp","Pobre", "Clase", "jefe_mujer", "max_edu_lev_h", "max_empl", "Horas_Hogar", "P6040", "age2", "prop_ocupados_pet", "relab_jefe", "prop_cotiza", "Ingtotugarr", "Valor_Arriendo", "Relab2", "nietos", "no_parientes", "otros_parientes", "prop_mujeres_pet", "ppc", "P5090", "Npersug")]
 
 #Se crea la matriz que le gusta a Ignacio
 df <- model.matrix(~ .  - 1, data)
@@ -103,53 +106,52 @@ test <- data.frame(test)
 
 names(train_s)
 
-y_train <- train_s[,"Ingpcug"]
-X_train <- select(train, -c("Ingpcug", "Lp", "Pobre"))
+y_train <- train_s[,"Ingtotugarr"]
+X_train <- select(train, -c("Lp", "Pobre", "Ingtotugarr", "Npersug"))
 
 #Iniciamos con la regresión lineal
 
 names(train_s)
 
-modelo1 <- lm(formula = Ingpcug ~ . -1-Lp-Pobre, data = train_s)
+modelo1 <- lm(formula = Ingtotugarr ~ . -1-Lp-Pobre-Npersug, data = train_s)
 insample1 <- predict(modelo1, train_s)
 
-train_s$prediccion <- insample1
-train_s$pobre_lm <- ifelse(train_s$prediccion <= train_s$Lp, 1, 0)
+resultados <- train_s%>%select(Ingtotugarr, Pobre, Npersug, Lp)
+resultados$pred_lm <- insample1
+resultados$pobre_lm <- ifelse(resultados$pred_lm/resultados$Npersug <= resultados$Lp, 1, 0)
 
-tabla_lm <- train_s%>%select(Pobre, pobre_lm)%>%table()
+tabla_lm <- resultados%>%select(Pobre, pobre_lm)%>%table()
 
-cm_lm <- confusionMatrix(data=factor(train_s$pobre_lm) , 
-                          reference=factor(train_s$Pobre) , 
+cm_lm <- confusionMatrix(data=factor(resultados$pobre_lm) , 
+                          reference=factor(resultados$Pobre) , 
                           mode="sens_spec" , positive="1")
 cm_lm
 
 
-#En este modelo el sesnsitivity es bajo(0.53), pero tenemos un specificty bueno (0.89) y un accuracy decennte (0.82)
-Agregado_lm <- cm_lm$byClass[[1]]*0.75 +cm_lm$byClass[[2]]*0.25  #0.62
-
-
+#En este modelo el sesnsitivity es bajo(0.53), pero tenemos un specificty bueno (0.90) y un accuracy decennte (0.83)
+Agregado_lm <- cm_lm$byClass[[1]]*0.75 +cm_lm$byClass[[2]]*0.25  #0.63
 
 
 
 names(data)
 
 #Logit
-logit <- glm(formula = factor(Pobre) ~ . - 1- Lp - Ingpcug, family=binomial(link="logit") , data=train_s)
+logit <- glm(formula = factor(Pobre) ~ . -1-Lp-Ingtotugarr-Npersug, family=binomial(link="logit") , data=train_s)
 tidy(logit)
-train_s$pobre_log <- predict(logit , newdata=train_s , type="response")
+resultados$pobre_log <- predict(logit , newdata=train_s , type="response")
 
 rule <- 0.5
-train_s$pred_log <- ifelse(train_s$pobre_log >= rule, 1, 0)
-tabla_log <- train_s%>%select(Pobre, pred_log)%>%table()
+resultados$pred_log <- ifelse(resultados$pobre_log >= rule, 1, 0)
+tabla_log <- resultados%>%select(Pobre, pred_log)%>%table()
 
 
-cm_log <- confusionMatrix(data=factor(train_s$pred_log) , 
-                          reference=factor(train_s$Pobre) , 
+cm_log <- confusionMatrix(data=factor(resultados$pred_log) , 
+                          reference=factor(resultados$Pobre) , 
                           mode="sens_spec" , positive="1")
 cm_log
-#Lo primero importante es conseguir un sensitivity alto, el del logit dio 0.52, specificity de 0.94 y accuracy de 0.86
+#Lo primero importante es conseguir un sensitivity alto, el del logit dio 0.53, specificity de 0.95 y accuracy de 0.86
 
-Agregado_log <- cm_log$byClass[[1]]*0.75 +cm_log$byClass[[2]]*0.25 #0.62
+Agregado_log <- cm_log$byClass[[1]]*0.75 +cm_log$byClass[[2]]*0.25 #0.63
 
 
 

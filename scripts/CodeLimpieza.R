@@ -310,6 +310,7 @@ ggplot(data = train_completa, aes(x = factor(Pobre), y = P6040))+
 
 train_completa <- read.csv("train_completa.csv")
 train_completa$Ingpcug <- train_hogares$Ingpcug
+train_completa$Ingtotugarr <- train_hogares$Ingtotugarr
 write.csv(train_completa, "train_completa.csv")
 
 write.csv(reshape_miembros, "reshapemiembros.csv")
@@ -318,5 +319,8 @@ reshape_miembros <- read.csv("reshapemiembros.csv")
 #Se anexan aquellas variables que faltaba anexar (Luego pasar esto arriba)
 
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning")
+
+
+#Revisar si vale la pena agregar si reciben ingresos por arriendos
 
 
