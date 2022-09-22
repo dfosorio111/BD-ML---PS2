@@ -6,9 +6,9 @@ rm(list=ls())
 #Daniel
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning/BD-ML---PS2/data")
 #Diego
-setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data")
+setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
 #Samuel
-setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2/data")
+setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2")
 
 #Se establece semilla
 set.seed(1000)
