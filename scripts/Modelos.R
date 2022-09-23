@@ -73,6 +73,8 @@ is.na(data$P5090)%>%table()
 
 data <- data[c("Lp","Pobre", "Clase", "jefe_mujer", "max_edu_lev_h", "max_empl", "Horas_Hogar", "P6040", "age2", "prop_ocupados_pet", "relab_jefe", "prop_cotiza", "Ingtotugarr", "Valor_Arriendo", "Relab2", "nietos", "no_parientes", "otros_parientes", "prop_mujeres_pet", "ppc", "P5090", "Npersug")]
 
+class(data)
+
 #Se crea la matriz que le gusta a Ignacio
 df <- model.matrix(~ .  - 1, data)
 
@@ -91,7 +93,7 @@ test <- df[-train_ind, ]
 
 # Estandarizamos DESPUÉS de partir la base en train/test
 variables_numericas <- c( "P6040", "Horas_Hogar",
-                          "prop_ocupados_pet", "age2", "prop_cotiza", "Valor_Arriendo")
+                          "prop_ocupados_pet", "age2", "prop_cotiza", "Valor_Arriendo", "ppc")
 escalador <- preProcess(train[, variables_numericas])
 train_s <- train
 test_s <- test
@@ -158,24 +160,26 @@ Agregado_log <- cm_log$byClass[[1]]*0.75 +cm_log$byClass[[2]]*0.25 #0.63
 
 ####Lasso y Ridge para el lineal
 
+lambdas_ridge <- seq(0,1,0.001)
 
 modelo_ridge <- glmnet(
   x = X_train,
   y = y_train,
   alpha = 0,
-  nlambda = 300,
+  lambda = lambdas_ridge,
   standardize = FALSE
 )
 
+
 predicciones <- train_s$Pobre
-predicciones <- cbind(predicciones,train_s$Ingpcug, train_s$Lp)
+predicciones <- cbind(predicciones,train_s$Ingtotugarr, train_s$Lp)
 predicciones <- as.data.frame(predicciones)
 colnames(predicciones) <- c("PobrezaReal", "IngpcReal", "Lp")
 
 predicciones_ridge <- predict(modelo_ridge, 
                               newx = as.matrix(X_train))
 
-lambdas_ridge <- modelo_ridge$lambda
+
 
 resultados_ridge <- data.frame()
 for (i in 1:length(lambdas_ridge)) {
