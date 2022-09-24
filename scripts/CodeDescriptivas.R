@@ -143,13 +143,17 @@ train_completa_definitiva <- train_completa_definitiva %>%
 
 train_completa_definitiva$años_educ_promedio <- rowMeans(subset(train_completa_definitiva, select= c("años_educ1", "años_educ2", "años_educ3")),na.rm=TRUE)
 
-train_completa_definitiva$distancia_peak <- train_completa_definitiva %>% 
-  subset(train_completa_definitiva, select= c("años_educ1", "años_educ2", "años_educ3"))
-
-
-
 summary(train_completa_definitiva$años_educ_promedio)
 
+# Cuartos per capita
+
+train_completa_definitiva <- train_completa_definitiva %>% mutate(cuartospc = P5010/Nper)
+
+summary(train_completa_definitiva$cuartospc)
+
+# Gráficos
+
+summary(train_completa_definitiva$Ingpcug)
 
 
 
