@@ -62,6 +62,7 @@ data <- data[-c(1:8,10,14:17,19,21,23,28,30,37,41:44,51,53,56,57,59)]
 #Se crea la matriz de dummys
 df <- model.matrix(~ .  - 1, data)%>%data.frame()
 
+write.csv(df,"dfdummy.csv")
 
 # Dividimos train/test (70/30)
 
@@ -102,6 +103,10 @@ train_s <- data.frame(train_s)
 test_s <- data.frame(test_s)
 train <- data.frame(train)
 test <- data.frame(test)
+
+
+write.csv(train_s,"train_s.csv")
+write.csv(train_s,"tets_s.csv")
 
 #Oversampling
 train_s$Pobre1 <- factor(train_s$Pobre1)
