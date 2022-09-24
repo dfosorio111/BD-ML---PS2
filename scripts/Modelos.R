@@ -135,6 +135,7 @@ prop.table(table(test_s$Pobre1))
 
 
 
+
 #Iniciamos con la regresión lineal
 
 names(train_s_under)
@@ -149,7 +150,6 @@ resultados <- train_s%>%select(Ingtotugarr, Pobre1, Npersug, Lp)
 resultados$pred_lm <- exp(insample1)
 resultados$pobre_lm <- ifelse(resultados$pred_lm/resultados$Npersug <= resultados$Lp, 1, 0)
 
-tabla_lm <- resultados%>%select(Pobre, pobre_lm)%>%table()
 
 cm_lm <- confusionMatrix(data=factor(resultados$pobre_lm) , 
                          reference=factor(resultados$Pobre) , 
@@ -166,7 +166,7 @@ resultados2$pobre_lm <- ifelse(resultados2$pred_lm/resultados2$Npersug <= result
 
 
 cm_lm2 <- confusionMatrix(data=factor(resultados2$pobre_lm) , 
-                         reference=factor(resultados2$Pobre) , 
+                         reference=factor(resultados2$Pobre1) , 
                          mode="sens_spec" , positive="1")
 cm_lm2
 
@@ -180,17 +180,16 @@ Agregado_lm <- cm_lm$byClass[[1]]*0.75 +cm_lm$byClass[[2]]*0.25  #0.63
 names(data)
 
 #Logit
-logit <- glm(formula = factor(Pobre) ~ . -1-Lp-Ingtotugarr-Npersug, family=binomial(link="logit") , data=train_s)
+logit <- glm(formula = Pobre1 ~ . -Clase1-log_ingtot-Lp-Ingtotugarr, family=binomial(link="logit") , data=train_s)
 tidy(logit)
 resultados$pobre_log <- predict(logit , newdata=train_s , type="response")
 
 rule <- 0.5
 resultados$pred_log <- ifelse(resultados$pobre_log >= rule, 1, 0)
-tabla_log <- resultados%>%select(Pobre, pred_log)%>%table()
 
 
 cm_log <- confusionMatrix(data=factor(resultados$pred_log) , 
-                          reference=factor(resultados$Pobre) , 
+                          reference=factor(resultados$Pobre1) , 
                           mode="sens_spec" , positive="1")
 cm_log
 #Lo primero importante es conseguir un sensitivity alto, el del logit dio 0.53, specificity de 0.95 y accuracy de 0.86
@@ -202,40 +201,9 @@ Agregado_log <- cm_log$byClass[[1]]*0.75 +cm_log$byClass[[2]]*0.25 #0.63
 
 ####Lasso y Ridge para el lineal
 
-lambdas_ridge <- seq(0,1,0.001)
-
-modelo_ridge <- glmnet(
-  x = X_train,
-  y = y_train,
-  alpha = 0,
-  lambda = lambdas_ridge,
-  standardize = FALSE
-)
-
-
-predicciones <- train_s$Pobre
-predicciones <- cbind(predicciones,train_s$Ingtotugarr, train_s$Lp)
-predicciones <- as.data.frame(predicciones)
-colnames(predicciones) <- c("PobrezaReal", "IngpcReal", "Lp")
-
-predicciones_ridge <- predict(modelo_ridge, 
-                              newx = as.matrix(X_train))
 
 
 
-resultados_ridge <- data.frame()
-for (i in 1:length(lambdas_ridge)) {
-  l <- lambdas_ridge[i]
-  y_hat_out3 <- predicciones_ridge[, i]
-  r23 <- R2_Score(y_pred = y_hat_out3, y_true = y_train)
-  rmse3 <- RMSE(y_pred = y_hat_out3, y_true = y_train)
-  resultado <- data.frame(Modelo = "Ridge",
-                          Muestra = "Dentro",
-                          Lambda = l,
-                          R2_Score = r23, 
-                          RMSE = rmse3)
-  resultados_ridge <- bind_rows(resultados_ridge, resultado)
-}
 
 ggplot(resultados_ridge, aes(x = Lambda, y = RMSE)) +
   geom_point() +
