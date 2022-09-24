@@ -105,6 +105,7 @@ test <- data.frame(test)
 
 #Oversampling
 train_s$Pobre1 <- factor(train_s$Pobre1)
+test_s$Pobre1 <- factor(test_s$Pobre1)
 
 sum(is.na(train_s))
 
@@ -121,7 +122,7 @@ train_s_under <- recipe(Pobre1~., data = train_s)%>%
 
 prop.table(table(train_s$Pobre1))
 prop.table(table(train_s_under$Pobre1))
-
+prop.table(table(test_s$Pobre1))
 
 #y_train <- train_s[,"Ingtotugarr"]
 #X_train <- select(train, -c("Lp", "Pobre", "Ingtotugarr", "Npersug"))
@@ -133,21 +134,37 @@ prop.table(table(train_s_under$Pobre1))
 
 names(train_s_under)
 
-modelo1 <- lm(formula = log_ingtot ~ (.)^2 -Clase1-Pobre1-Lp-Ingtotugarr , data = train_s_under)
+modelo1 <- lm(formula = log_ingtot ~. -Clase1-Pobre1-Lp-Ingtotugarr , data = train_s_under)
 insample1 <- predict(modelo1, train_s)
+y_hat_test1 <- predict(modelo1, test_s)
 
 
-
-resultados <- train_s%>%select(Ingtotugarr, Pobre, Npersug, Lp)
-resultados$pred_lm <- insample1
+#Dentro de muestra
+resultados <- train_s%>%select(Ingtotugarr, Pobre1, Npersug, Lp)
+resultados$pred_lm <- exp(insample1)
 resultados$pobre_lm <- ifelse(resultados$pred_lm/resultados$Npersug <= resultados$Lp, 1, 0)
 
 tabla_lm <- resultados%>%select(Pobre, pobre_lm)%>%table()
 
 cm_lm <- confusionMatrix(data=factor(resultados$pobre_lm) , 
-                          reference=factor(resultados$Pobre) , 
-                          mode="sens_spec" , positive="1")
+                         reference=factor(resultados$Pobre) , 
+                         mode="sens_spec" , positive="1")
 cm_lm
+
+
+
+#Fuera de muestra
+resultados2 <- test_s%>%select(Ingtotugarr, Pobre1, Npersug, Lp)
+resultados2$pred_lm <- exp(y_hat_test1)
+resultados2$pobre_lm <- ifelse(resultados2$pred_lm/resultados2$Npersug <= resultados2$Lp, 1, 0)
+
+
+
+cm_lm2 <- confusionMatrix(data=factor(resultados2$pobre_lm) , 
+                         reference=factor(resultados2$Pobre) , 
+                         mode="sens_spec" , positive="1")
+cm_lm2
+
 
 
 #En este modelo el sesnsitivity es bajo(0.53), pero tenemos un specificty bueno (0.90) y un accuracy decennte (0.83)
