@@ -7,9 +7,9 @@ rm(list=ls())
 #Daniel
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning/BD-ML---PS2/data")
 #Diego
-setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
+setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data")
 #Samuel
-setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2")
+setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2/data")
 
 
 #Importar paquetes y cargar librerías
@@ -24,11 +24,26 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
 
 data <- read.csv("train_completa.csv")
 
+data$prop_ocupados_pet <- ifelse(is.na(data$prop_ocupados_pet),0, data$prop_ocupados_pet)
+data$prop_Desocupados_pet <- ifelse(is.na(data$prop_Desocupados_pet),0, data$prop_Desocupados_pet)
+data$prop_cotiza <- ifelse(is.na(data$prop_cotiza),0, data$prop_cotiza)
+
+
+# Check los NAs de la base
+sapply(data, function(x) sum(is.na(x)))
+
 #Revisemos qué variables tenemos
 names(data)
 
+# evaluar correlacion entre variables
+cor(data$Cant_cotiza_recibe, data$prop_cotiza)
+
+
+
+
 #ingreso en logaritmo
-data$log_ingtot <- log(data$Ingtotugarr)
+data$log_ingtot <- log(data$Ingtotugarr+1)
+
 
 is.na(data$P5100)%>%table()
 
@@ -41,7 +56,7 @@ for (var in categoricas) {
   data[,var] <- as.factor(data[,var, drop = TRUE])
 }
 
-data <- data[-c(1:8,14:16,19,21,23)]
+data <- data[-c(1:8,10,14:17,19,21,23,28,30,37,41:44,51,53,56,57,59)]
 
 
 #Se crea la matriz de dummys
@@ -66,13 +81,12 @@ test <- df[-train_ind, ]
 
 # Estandarizamos DESPUÉS de partir la base en train/test
 
-
 names(df)
 names(data)
 variables_numericas <- c("P5000", "P5010", "num_mujeres", "P6040", "Horas_Hogar", "Horas_reales",
-                         "Num_ocu_hogar", "Num_des_hogar", "Num_pet_hogar", "Cant_cotiza_recibe", 
-                         "prop_ocupados_total", "prop_ocupados_pet", "prop_Desocupados_total",
-                         "prop_Desocupados_pet", "prop_mujeres_total", "prop_mujeres_pet",
+                         "Num_ocu_hogar", "Num_des_hogar", 
+                         "prop_ocupados_pet",
+                         "prop_Desocupados_pet", "prop_mujeres_total",
                          "prop_cotiza", "ppc", "Valor_Arriendo", "age2")
                         
 
@@ -95,7 +109,7 @@ train_s$Pobre1 <- factor(train_s$Pobre1)
 sum(is.na(train_s))
 
 train_s_over <- recipe(Pobre1~., data = train_s)%>%
-  themis::step_(Pobre1)%>%
+  themis::step_smote(Pobre1)%>%
   prep()%>%
   bake(new_data = NULL)
 
@@ -119,9 +133,10 @@ prop.table(table(train_s_under$Pobre1))
 
 names(train_s_under)
 
-train_s_under$ing
-modelo1 <- lm(formula = log_ingtot ~. , data = train_s_under)
+modelo1 <- lm(formula = log_ingtot ~ (.)^2 -Clase1-Pobre1-Lp-Ingtotugarr , data = train_s_under)
 insample1 <- predict(modelo1, train_s)
+
+
 
 resultados <- train_s%>%select(Ingtotugarr, Pobre, Npersug, Lp)
 resultados$pred_lm <- insample1
