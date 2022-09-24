@@ -11,8 +11,7 @@ setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
 #Samuel
 setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2")
 
-#Se establece semilla
-set.seed(1000)
+
 #Importar paquetes y cargar librerías
 require(pacman)
 p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio, 
@@ -21,70 +20,44 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
        modelsummary, # tidy, msummary
        gamlr,        # cv.gamlr
        ROCR, # ROC curve
-       class, glmnet)
+       class, glmnet, janitor, doParallel, rattle, fastDummies, tidymodels, themis, AER)
 
 data <- read.csv("train_completa.csv")
-names(data)
-data$Valor_Arriendo <- ifelse(is.na(data$P5130),data$P5140, data$P5130)
-data <- data[-c(1:5,12:14,17,19,21)]
 
-#Las variables que son factores ponerlas como factores
-names(data)
-data$age2 <- data$P6040^2
-#data$age_mujer <- data$P6040*data$jefe_mujer
-#data$age2_mujer <- data$age2*data$jefe_mujer
-data$Clase <- as.factor(data$Clase)
-data$Dominio <- as.factor(data$Dominio)
-data$P5090 <- as.factor(data$P5090)
-data$Depto <- as.factor(data$Depto)
-#Ojo con esta variable, hay varios 98 y 99 que podrían asignarse mejor con KNN
-
-data$jefe_mujer <- as.factor(data$jefe_mujer)
-data$P6090 <- as.factor(data$P6090)
-#Recordar que esta es afiliación a seguridad social en salud
-data$jefe_cotiza <- as.factor(data$jefe_cotiza)
-data$relab_jefe <- as.factor(data$relab_jefe)
-data$max_edu_lev_h <- as.factor(data$max_edu_lev_h)
-data$max_empl<- as.factor(data$max_empl)
-data$Relab1 <- as.factor(data$Relab1)
-data$Relab2 <- as.factor(data$Relab2)
-data$Relab3 <- as.factor(data$Relab3)
-data$Educ1 <- as.factor(data$Educ1)
-data$Educ2 <- as.factor(data$Educ2)
-data$Educ3 <- as.factor(data$Educ3)
-data$hijos <- as.factor(data$hijos)
-data$pareja <- as.factor(data$pareja)
-data$nietos <- as.factor(data$nietos)
-data$otros_parientes <- as.factor(data$otros_parientes)
-data$no_parientes <- as.factor(data$no_parientes)
-data$emp_pen <- as.factor(data$emp_pen)
-data$prop_cotiza <- data$Cant_cotiza_recibe/data$Num_pet_hogar
-data$ppc <- data$Nper/data$P5010
-
-is.na(data$P5010)%>%table()
-data%>%count(P5010)
-
-
+#Revisemos qué variables tenemos
 names(data)
 
-plot(data$ppc, log(data$Ingpcug))
+#ingreso en logaritmo
+data$log_ingtot <- log(data$Ingtotugarr)
 
-is.na(data$P5090)%>%table()
+is.na(data$P5100)%>%table()
 
-data <- data[c("Lp","Pobre", "Clase", "jefe_mujer", "max_edu_lev_h", "max_empl", "Horas_Hogar", "P6040", "age2", "prop_ocupados_pet", "relab_jefe", "prop_cotiza", "Ingtotugarr", "Valor_Arriendo", "Relab2", "nietos", "no_parientes", "otros_parientes", "prop_mujeres_pet", "ppc", "P5090", "Npersug")]
+categoricas <- c("Pobre", "Clase", "Dominio", "P5090", "Depto", "jefe_mujer", "P6090", "jefe_cotiza", "relab_jefe",
+                 "P6090", "jefe_cotiza", "relab_jefe", "max_edu_lev_h", "max_empl", "Relab1", "Relab2", "Relab3",
+                 "Educ1", "Educ2", "Educ3", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen",
+                 "recibe_arriendos")
 
-class(data)
+for (var in categoricas) {
+  data[,var] <- as.factor(data[,var, drop = TRUE])
+}
 
-#Se crea la matriz que le gusta a Ignacio
-df <- model.matrix(~ .  - 1, data)
+data <- data[-c(1:8,14:16,19,21,23)]
+
+
+#Se crea la matriz de dummys
+df <- model.matrix(~ .  - 1, data)%>%data.frame()
 
 
 # Dividimos train/test (70/30)
-n <- nrow(df)
-smp_size <- floor(0.7*n)
-train_ind <- sample(1:n, size = smp_size)
 
+#Se establece semilla
+set.seed(1000)
+n <- nrow(df)
+smp_size <- floor(0.8*n)
+train_ind <- sample(1:n, size = smp_size)
+#Crear train set para ajustar los parámetros
 train <- df[train_ind, ]
+#Crear test set para evaluar el modelo
 test <- df[-train_ind, ]
 
 
@@ -92,8 +65,18 @@ test <- df[-train_ind, ]
 
 
 # Estandarizamos DESPUÉS de partir la base en train/test
-variables_numericas <- c( "P6040", "Horas_Hogar",
-                          "prop_ocupados_pet", "age2", "prop_cotiza", "Valor_Arriendo", "ppc")
+
+
+names(df)
+names(data)
+variables_numericas <- c("P5000", "P5010", "num_mujeres", "P6040", "Horas_Hogar", "Horas_reales",
+                         "Num_ocu_hogar", "Num_des_hogar", "Num_pet_hogar", "Cant_cotiza_recibe", 
+                         "prop_ocupados_total", "prop_ocupados_pet", "prop_Desocupados_total",
+                         "prop_Desocupados_pet", "prop_mujeres_total", "prop_mujeres_pet",
+                         "prop_cotiza", "ppc", "Valor_Arriendo", "age2")
+                        
+
+
 escalador <- preProcess(train[, variables_numericas])
 train_s <- train
 test_s <- test
@@ -106,16 +89,38 @@ test_s <- data.frame(test_s)
 train <- data.frame(train)
 test <- data.frame(test)
 
-names(train_s)
+#Oversampling
+train_s$Pobre1 <- factor(train_s$Pobre1)
 
-y_train <- train_s[,"Ingtotugarr"]
-X_train <- select(train, -c("Lp", "Pobre", "Ingtotugarr", "Npersug"))
+sum(is.na(train_s))
+
+train_s_over <- recipe(Pobre1~., data = train_s)%>%
+  themis::step_(Pobre1)%>%
+  prep()%>%
+  bake(new_data = NULL)
+
+###Undersampling
+train_s_under <- recipe(Pobre1~., data = train_s)%>%
+  themis::step_downsample(Pobre1, under_ratio = 1.5)%>%
+  prep()%>%
+  bake(new_data = NULL)
+
+prop.table(table(train_s$Pobre1))
+prop.table(table(train_s_under$Pobre1))
+
+
+#y_train <- train_s[,"Ingtotugarr"]
+#X_train <- select(train, -c("Lp", "Pobre", "Ingtotugarr", "Npersug"))
+
+
+
 
 #Iniciamos con la regresión lineal
 
-names(train_s)
+names(train_s_under)
 
-modelo1 <- lm(formula = Ingtotugarr ~ . -1-Lp-Pobre-Npersug, data = train_s)
+train_s_under$ing
+modelo1 <- lm(formula = log_ingtot ~. , data = train_s_under)
 insample1 <- predict(modelo1, train_s)
 
 resultados <- train_s%>%select(Ingtotugarr, Pobre, Npersug, Lp)
@@ -256,3 +261,6 @@ dc <- data%>%
 
 ggplot(data = dc, aes(x = factor(Clase), y = perc, fill = factor(Pobre)))+
   geom_bar(stat="identity", width = 0.7)
+
+#Árboles de decisión y random forest
+

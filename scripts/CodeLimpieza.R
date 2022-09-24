@@ -24,6 +24,8 @@ train_personas <- readRDS("train_personas.Rds")
 test_hogares <- readRDS("test_hogares.Rds")
 test_personas <- readRDS("test_personas.Rds")
 
+names(test_personas)
+
 
 #Importar archivos Diego
 train_hogares <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data/train_hogares.Rds")
@@ -97,6 +99,8 @@ train_p_jefecotiza <- train_p%>%subset(P6050==1)%>%select(id, P6090)%>%mutate(je
 #relación laboral:P6430 del jefe del hogar
 #10 es desocupado y 11 es inactivo
 train_p_jef_ocu <- train_p%>%subset(P6050==1)%>%mutate(relab_jefe= ifelse(is.na(Oc), ifelse(is.na(Des), 11, 10) , P6430) )%>%select(id, relab_jefe)  #ifelse(Des==1,10,11)     
+
+
 
 
 #Subsidio familiar
@@ -238,6 +242,8 @@ for (i in 1:nrow(reshape_miembros)) {
   }
 }
 
+
+
 reshape_miembros <- reshape_miembros%>%select("id", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen")
 
 #Merge de personas y hogares
@@ -321,6 +327,46 @@ reshape_miembros <- read.csv("reshapemiembros.csv")
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning")
 
 
+
+#Adicionales
+
+#Alguien recibe arriendo
+train_p$P7495 <- 2 - train_p$P7495
+
+train_arriendo <- train_p%>%subset(P6040>=10)%>%group_by(id)%>%summarise(suma = sum(P7495, na.rm = TRUE))%>%mutate(recibe_arriendos = ifelse(suma > 0, 1, 0))
+
+
+data <- read.csv("train_completa.csv")
+
+data <- full_join(data, train_arriendo)
+
+
+names(data)
+data$Valor_Arriendo <- ifelse(is.na(data$P5130),data$P5140, data$P5130)
+data <- data[-c(1:5,12:14,17,19,21)]
+
+#Las variables que son factores ponerlas como factores
+names(data)
+#Edad del jefe del hogar al cuadrado
+data$age2 <- data$P6040^2
+#data$age_mujer <- data$P6040*data$jefe_mujer
+#data$age2_mujer <- data$age2*data$jefe_mujer
+
+categoricas <- c("Pobre", "Clase", "Dominio", "P5090", "Depto", "jefe_mujer", "P6090", "jefe_cotiza", "relab_jefe",
+                 "P6090", "jefe_cotiza", "relab_jefe", "max_edu_lev_h", "max_empl", "Relab1", "Relab2", "Relab3",
+                 "Educ1", "Educ2", "Educ3", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen",
+                 "recibe_arriendos")
+
+for (var in categoricas) {
+  data[,var] <- as.factor(data[,var, drop = TRUE])
+}
+
+
+data$prop_cotiza <- data$Cant_cotiza_recibe/data$Num_pet_hogar
+data$ppc <- data$Nper/data$P5010
+
+
+write.csv(data, "train_completa.csv")
 #Revisar si vale la pena agregar si reciben ingresos por arriendos
 
 
