@@ -14,7 +14,7 @@ set.seed(1000)
 require(pacman)
 p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio, 
        vtable, stargazer, ggplot2, boot, MLmetrics, lfe, 
-       tidyverse, fabricatr, stargazer, Hmisc, writexl, viridis, here)
+       tidyverse, fabricatr, stargazer, Hmisc, writexl, viridis, here, hablar)
 
 ##########################################################################
 ##########################################################################
@@ -117,21 +117,38 @@ train_completa_definitiva <- read.csv("data/train_completa_definitiva.csv")
 
 # Corrección educación
 
-train_completa_definitiva %>%
+train_completa_definitiva <- train_completa_definitiva %>%
   mutate(años_educ1 = case_when(Educ1 == 1 ~ 0,
-                                Educ1 == 2 ~ 5,
-                                Educ1 == 3 ~ 10,
-                                Educ1 == 4 ~ 14,
-                                Educ1 == 5 ~ 16,
-                                Educ1 == 6 ~ 21))
+                                Educ1 == 2 ~ 2,
+                                Educ1 == 3 ~ 7,
+                                Educ1 == 4 ~ 10,
+                                Educ1 == 5 ~ 13,
+                                Educ1 == 6 ~ 18))
+
+train_completa_definitiva <- train_completa_definitiva %>%
+  mutate(años_educ2 = case_when(Educ2 == 1 ~ 0,
+                                Educ2 == 2 ~ 2,
+                                Educ2 == 3 ~ 7,
+                                Educ2 == 4 ~ 10,
+                                Educ2 == 5 ~ 13,
+                                Educ2 == 6 ~ 18))
+
+train_completa_definitiva <- train_completa_definitiva %>%
+  mutate(años_educ3 = case_when(Educ3 == 1 ~ 0,
+                                Educ3 == 2 ~ 2,
+                                Educ3 == 3 ~ 7,
+                                Educ3 == 4 ~ 10,
+                                Educ3 == 5 ~ 13,
+                                Educ3 == 6 ~ 18))
+
+train_completa_definitiva$años_educ_promedio <- rowMeans(subset(train_completa_definitiva, select= c("años_educ1", "años_educ2", "años_educ3")),na.rm=TRUE)
+
+train_completa_definitiva$distancia_peak <- train_completa_definitiva %>% 
+  subset(train_completa_definitiva, select= c("años_educ1", "años_educ2", "años_educ3"))
 
 
 
-
-
-
-
-
+summary(train_completa_definitiva$años_educ_promedio)
 
 
 
