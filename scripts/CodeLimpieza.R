@@ -357,6 +357,11 @@ categoricas <- c("Pobre", "Clase", "Dominio", "P5090", "Depto", "jefe_mujer", "P
                  "Educ1", "Educ2", "Educ3", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen",
                  "recibe_arriendos")
 
+data$Cant_cotiza_recibe
+data$Num_pet_hogar
+
+View(data%>%select("id","Cant_cotiza_recibe", "Num_pet_hogar", "prop_cotiza"))
+
 for (var in categoricas) {
   data[,var] <- as.factor(data[,var, drop = TRUE])
 }
