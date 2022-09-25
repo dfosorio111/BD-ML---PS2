@@ -104,6 +104,11 @@ test_s <- data.frame(test_s)
 train <- data.frame(train)
 test <- data.frame(test)
 
+#max(train_s$prop_cotiza)
+
+names(train_s)
+x_train_s = train_s_under[-c(1,11,35,106,112)]
+x_test = test_s[-c(1,11,35,106,112)]
 
 write.csv(train_s,"train_s.csv")
 write.csv(train_s,"tets_s.csv")
@@ -125,12 +130,21 @@ train_s_under <- recipe(Pobre1~., data = train_s)%>%
   prep()%>%
   bake(new_data = NULL)
 
+train_s_under <- as.data.frame(train_s_under)
+
+write.csv(train_s_under,"train_s_under.csv")
+
 prop.table(table(train_s$Pobre1))
 prop.table(table(train_s_under$Pobre1))
 prop.table(table(test_s$Pobre1))
 
-#y_train <- train_s[,"Ingtotugarr"]
+train_s_under$log_ingtot
+
+y_train <- train_s_under[,"log_ingtot"]
+y_test <-  test_s[,"log_ingtot"]
+p_test <-  test_s[,"Pobre1"]
 #X_train <- select(train, -c("Lp", "Pobre", "Ingtotugarr", "Npersug"))
+
 
 
 
@@ -144,12 +158,25 @@ insample1 <- predict(modelo1, train_s)
 y_hat_test1 <- predict(modelo1, test_s)
 
 
+df_coeficientes_reg <- modelo1$coefficients %>%
+  enframe(name = "predictor", value = "coeficiente")
+
+df_coeficientes_reg %>%
+  filter(predictor != "`(Intercept)`") %>%
+  ggplot(aes(x = reorder(predictor, abs(coeficiente)), 
+             y = coeficiente)) +
+  geom_col(fill = "darkblue") +
+  coord_flip() +
+  labs(title = "Coeficientes del modelo de regresión", 
+       x = "Variables",
+       y = "Coeficientes") +
+  theme_bw()
+
 #Dentro de muestra
 resultados <- train_s%>%select(Ingtotugarr, Pobre1, Npersug, Lp)
 resultados$pred_lm <- exp(insample1)
 resultados$pobre_lm <- ifelse(resultados$pred_lm/resultados$Npersug <= resultados$Lp, 1, 0)
 
-tabla_lm <- resultados%>%select(Pobre, pobre_lm)%>%table()
 
 cm_lm <- confusionMatrix(data=factor(resultados$pobre_lm) , 
                          reference=factor(resultados$Pobre) , 
@@ -166,33 +193,135 @@ resultados2$pobre_lm <- ifelse(resultados2$pred_lm/resultados2$Npersug <= result
 
 
 cm_lm2 <- confusionMatrix(data=factor(resultados2$pobre_lm) , 
-                         reference=factor(resultados2$Pobre) , 
+                         reference=factor(resultados2$Pobre1) , 
                          mode="sens_spec" , positive="1")
 cm_lm2
 
 
+#agregado
+train_s_under$jefe_mujer1
 
-#En este modelo el sesnsitivity es bajo(0.53), pero tenemos un specificty bueno (0.90) y un accuracy decennte (0.83)
-Agregado_lm <- cm_lm$byClass[[1]]*0.75 +cm_lm$byClass[[2]]*0.25  #0.63
+names(train_s_under)
+
+x_train_s = train_s_under[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
+                            "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "max_empl1",
+                            "max_empl2", "max_empl3", "max_empl4", "max_empl5", "max_empl6",
+                            "max_empl7", "max_empl8", "max_empl9", "Relab12", "Relab13", 
+                            "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                            "Relab110", "Relab111", "Relab112", "Relab113")]
+x_test = test_s[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
+                  "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "max_empl1",
+                  "max_empl2", "max_empl3", "max_empl4", "max_empl5", "max_empl6",
+                  "max_empl7", "max_empl8", "max_empl9", "Relab12", "Relab13", 
+                  "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                  "Relab110", "Relab111", "Relab112", "Relab113")]
+
+#Lasso y Ridge para regresión lineal
+# Ridge. Alpha = 0
+modelo_ridge <- glmnet(
+  x = x_train_s,
+  y = y_train,
+  alpha = 0,
+  lambda = seq(0,5,0.001),
+  standardize = FALSE
+)
 
 
+
+y_hat_train_ridge <- predict(modelo_ridge, 
+                              newx = as.matrix(x_train_s))
+
+y_hat_test_ridge <- predict(modelo_ridge, 
+                       newx = as.matrix(x_test))
+
+p_hat_test <- ifelse(exp(predict(modelo_ridge, newx = as.matrix(x_test)))/test_s$Npersug < test_s$Lp,1,0)
+  
+  
+#Lambdas del modelo ridge
+lambdas_ridge <- modelo_ridge$lambda
+
+#Validación cruzada
+resultados_ridge <- data.frame()
+for (i in 1:length(lambdas_ridge)) {
+  lreg <- lambdas_ridge[i]
+  y_hat_test_pred_ridge <- y_hat_test_ridge[, i]
+  p_hat_test_pred_ridge <- p_hat_test[, i]
+  r23 <- R2_Score(y_pred = y_hat_test_pred_ridge, y_true = y_test)
+  rmse3 <- RMSE(y_pred = y_hat_test_pred_ridge, y_true = y_test)
+  cm_ridge_test <- confusionMatrix(data=factor(p_hat_test_pred_ridge) , 
+                            reference=factor(p_test) , 
+                            mode="sens_spec" , positive="1")
+  recall <- cm_ridge_test$byClass[[1]]
+  resultado <- data.frame(Modelo = "Ridge",
+                          Muestra = "Fuera",
+                          Lambda = lreg,
+                          R2_Score = r23, 
+                          RMSE = rmse3,
+                          RECAL = recall)
+  resultados_ridge <- bind_rows(resultados_ridge, resultado)
+}
+
+ggplot(resultados_ridge, aes(x = Lambda, y = RMSE)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  scale_y_continuous(labels = scales::comma)
+
+
+filtro <- resultados_ridge$RMSE == min(resultados_ridge$RMSE)
+mejor_lambda_ridge <- resultados_ridge[filtro, "Lambda"]
+
+filtro_recall <- resultados_ridge$RECAL == max(resultados_ridge$RECAL)
+mejor_lambda_ridge_recall <- resultados_ridge[filtro_recall, "Lambda"]
+
+y_hat_out3 <- predict.glmnet(modelo_ridge,
+                             newx = as.matrix(x_test),
+                             s = mejor_lambda_ridge_recall)
+
+
+y_hat_out3 <- as.data.frame(y_hat_out3)
+y_hat_out3$ingtot <- exp(y_hat_out3$s1)
+y_hat_out3$Lp <- test_s$Lp
+y_hat_out3$Pobre <- test_s$Pobre1
+y_hat_out3$Npersug <- test_s$Npersug
+y_hat_out3$Pred_Pobre <- ifelse(y_hat_out3$ingtot/y_hat_out3$Npersug < y_hat_out3$Lp, 1, 0)
+
+cm_lmridge_test <- confusionMatrix(data=factor(y_hat_out3$Pred_Pobre) , 
+                          reference=factor(y_hat_out3$Pobre) , 
+                          mode="sens_spec" , positive="1")
+cm_lmridge_test
 
 names(data)
 
 #Logit
-logit <- glm(formula = factor(Pobre) ~ . -1-Lp-Ingtotugarr-Npersug, family=binomial(link="logit") , data=train_s)
+logit <- glm(formula = Pobre1 ~ . -Clase1-log_ingtot-Lp-Ingtotugarr, family=binomial(link="logit") , data=train_s_under)
 tidy(logit)
-resultados$pobre_log <- predict(logit , newdata=train_s , type="response")
+resultados$pobre_log <- predict(logit , newdata=train_s, type="response")
 
 rule <- 0.5
 resultados$pred_log <- ifelse(resultados$pobre_log >= rule, 1, 0)
-tabla_log <- resultados%>%select(Pobre, pred_log)%>%table()
 
 
 cm_log <- confusionMatrix(data=factor(resultados$pred_log) , 
-                          reference=factor(resultados$Pobre) , 
+                          reference=factor(resultados$Pobre1) , 
                           mode="sens_spec" , positive="1")
 cm_log
+
+
+
+#Fuera de muestra
+resultados2$pobre_log_test <- predict(logit , newdata=test_s , type="response")
+
+rule <- 0.5
+resultados2$pred_log_test <- ifelse(resultados2$pobre_log_test >= rule, 1, 0)
+
+
+cm_log2 <- confusionMatrix(data=factor(resultados2$pred_log_test) , 
+                          reference=factor(resultados2$Pobre1) , 
+                          mode="sens_spec" , positive="1")
+cm_log2
+
+
 #Lo primero importante es conseguir un sensitivity alto, el del logit dio 0.53, specificity de 0.95 y accuracy de 0.86
 
 Agregado_log <- cm_log$byClass[[1]]*0.75 +cm_log$byClass[[2]]*0.25 #0.63
@@ -200,42 +329,9 @@ Agregado_log <- cm_log$byClass[[1]]*0.75 +cm_log$byClass[[2]]*0.25 #0.63
 
 
 
-####Lasso y Ridge para el lineal
-
-lambdas_ridge <- seq(0,1,0.001)
-
-modelo_ridge <- glmnet(
-  x = X_train,
-  y = y_train,
-  alpha = 0,
-  lambda = lambdas_ridge,
-  standardize = FALSE
-)
-
-
-predicciones <- train_s$Pobre
-predicciones <- cbind(predicciones,train_s$Ingtotugarr, train_s$Lp)
-predicciones <- as.data.frame(predicciones)
-colnames(predicciones) <- c("PobrezaReal", "IngpcReal", "Lp")
-
-predicciones_ridge <- predict(modelo_ridge, 
-                              newx = as.matrix(X_train))
 
 
 
-resultados_ridge <- data.frame()
-for (i in 1:length(lambdas_ridge)) {
-  l <- lambdas_ridge[i]
-  y_hat_out3 <- predicciones_ridge[, i]
-  r23 <- R2_Score(y_pred = y_hat_out3, y_true = y_train)
-  rmse3 <- RMSE(y_pred = y_hat_out3, y_true = y_train)
-  resultado <- data.frame(Modelo = "Ridge",
-                          Muestra = "Dentro",
-                          Lambda = l,
-                          R2_Score = r23, 
-                          RMSE = rmse3)
-  resultados_ridge <- bind_rows(resultados_ridge, resultado)
-}
 
 ggplot(resultados_ridge, aes(x = Lambda, y = RMSE)) +
   geom_point() +
