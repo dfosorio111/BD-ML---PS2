@@ -338,6 +338,8 @@ train_arriendo <- train_p%>%subset(P6040>=10)%>%group_by(id)%>%summarise(suma = 
 
 data <- read.csv("train_completa.csv")
 
+train_completa <- data
+
 data <- full_join(data, train_arriendo)
 
 
@@ -371,7 +373,42 @@ data$prop_cotiza <- data$Cant_cotiza_recibe/data$Num_pet_hogar
 data$ppc <- data$Nper/data$P5010
 
 
+sum(is.na(train_completa$Educ3))
+
+train_completa <- train_completa %>%
+  mutate(años_educ1 = case_when(Educ1 == 1 ~ 0,
+                                Educ1 == 2 ~ 2,
+                                Educ1 == 3 ~ 7,
+                                Educ1 == 4 ~ 10,
+                                Educ1 == 5 ~ 13,
+                                Educ1 == 6 ~ 18,
+                                Educ1 == 9 ~ 0))
+
+train_completa<- train_completa %>%
+  mutate(años_educ2 = case_when(Educ2 == 1 ~ 0,
+                                Educ2 == 2 ~ 2,
+                                Educ2 == 3 ~ 7,
+                                Educ2 == 4 ~ 10,
+                                Educ2 == 5 ~ 13,
+                                Educ2 == 6 ~ 18,
+                                Educ2 == 9 ~ 0))
+
+train_completa <- train_completa %>%
+  mutate(años_educ3 = case_when(Educ3 == 1 ~ 0,
+                                Educ3 == 2 ~ 2,
+                                Educ3 == 3 ~ 7,
+                                Educ3 == 4 ~ 10,
+                                Educ3 == 5 ~ 13,
+                                Educ3 == 6 ~ 18,
+                                Educ3 == 9 ~ 0))
+
+
+train_completa$años_educ_promedio <- rowMeans(subset(train_completa, select= c("años_educ1", "años_educ2", "años_educ3")),na.rm=TRUE)
+
+
+
 write.csv(data, "train_completa.csv")
+write.csv(train_completa, "train_completa.csv")
 #Revisar si vale la pena agregar si reciben ingresos por arriendos
 
 
