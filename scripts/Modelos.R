@@ -56,15 +56,15 @@ for (var in categoricas) {
   data[,var] <- as.factor(data[,var, drop = TRUE])
 }
 
-data <- data[-c(1:8,10,14:17,19,21,23,28,30,37,41:44,51,53,56,57,59)]
-
+names(data)
+data <- data[-c(1:9,11,15:18,20,22,24,29,31,38,42:45,52,54,57,58,60, 66:68)]
 
 #Se crea la matriz de dummys
 df <- model.matrix(~ .  - 1, data)%>%data.frame()
 
-write.csv(df,"dfdummy.csv")
+#write.csv(df,"dfdummy.csv")
 
-# Dividimos train/test (70/30)
+# Dividimos train/test (80/20)
 
 #Se establece semilla
 set.seed(1000)
@@ -88,7 +88,7 @@ variables_numericas <- c("P5000", "P5010", "num_mujeres", "P6040", "Horas_Hogar"
                          "Num_ocu_hogar", "Num_des_hogar", 
                          "prop_ocupados_pet",
                          "prop_Desocupados_pet", "prop_mujeres_total",
-                         "prop_cotiza", "ppc", "Valor_Arriendo", "age2")
+                         "prop_cotiza", "ppc", "Valor_Arriendo", "age2", "años_educ_promedio")
                         
 
 
@@ -107,22 +107,15 @@ test <- data.frame(test)
 #max(train_s$prop_cotiza)
 
 names(train_s)
-x_train_s = train_s_under[-c(1,11,35,106,112)]
-x_test = test_s[-c(1,11,35,106,112)]
 
-write.csv(train_s,"train_s.csv")
-write.csv(train_s,"tets_s.csv")
 
-#Oversampling
+#write.csv(train_s,"train_s.csv")
+#write.csv(train_s,"tets_s.csv")
+
+#Se crean pobre como factores
 train_s$Pobre1 <- factor(train_s$Pobre1)
 test_s$Pobre1 <- factor(test_s$Pobre1)
 
-sum(is.na(train_s))
-
-train_s_over <- recipe(Pobre1~., data = train_s)%>%
-  themis::step_smote(Pobre1)%>%
-  prep()%>%
-  bake(new_data = NULL)
 
 ###Undersampling
 train_s_under <- recipe(Pobre1~., data = train_s)%>%
@@ -132,21 +125,21 @@ train_s_under <- recipe(Pobre1~., data = train_s)%>%
 
 train_s_under <- as.data.frame(train_s_under)
 
-write.csv(train_s_under,"train_s_under.csv")
+#write.csv(train_s_under,"train_s_under.csv")
 
 prop.table(table(train_s$Pobre1))
 prop.table(table(train_s_under$Pobre1))
 prop.table(table(test_s$Pobre1))
 
-train_s_under$log_ingtot
 
 y_train <- train_s_under[,"log_ingtot"]
 y_test <-  test_s[,"log_ingtot"]
+p_train <- train_s_under[,"Pobre1"]
 p_test <-  test_s[,"Pobre1"]
+names(train_s_under)
+x_train_s = train_s_under[-c(1,11,105,112,113)]
+x_test = test_s[-c(1,11,105,112,113)]
 #X_train <- select(train, -c("Lp", "Pobre", "Ingtotugarr", "Npersug"))
-
-
-
 
 
 #Iniciamos con la regresión lineal
@@ -198,25 +191,115 @@ cm_lm2 <- confusionMatrix(data=factor(resultados2$pobre_lm) ,
 cm_lm2
 
 
+#No está mal, pero tenemos muchas variables
+
 #agregado
-train_s_under$jefe_mujer1
+
 
 names(train_s_under)
 
+
+##################################Modelos 1
 x_train_s = train_s_under[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
                             "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "max_empl1",
                             "max_empl2", "max_empl3", "max_empl4", "max_empl5", "max_empl6",
                             "max_empl7", "max_empl8", "max_empl9", "Relab12", "Relab13", 
                             "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
-                            "Relab110", "Relab111", "Relab112", "Relab113")]
+                            "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                            "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                            "Relab22", "Relab23", 
+                            "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                            "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                            "prop_Desocupados_pet", "Horas_Hogar")]
+x_train_s2 = train_s[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
+                            "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "max_empl1",
+                            "max_empl2", "max_empl3", "max_empl4", "max_empl5", "max_empl6",
+                            "max_empl7", "max_empl8", "max_empl9", "Relab12", "Relab13", 
+                            "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                            "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                            "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                            "Relab22", "Relab23", 
+                            "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                            "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                            "prop_Desocupados_pet", "Horas_Hogar")]
+
 x_test = test_s[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
                   "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "max_empl1",
                   "max_empl2", "max_empl3", "max_empl4", "max_empl5", "max_empl6",
                   "max_empl7", "max_empl8", "max_empl9", "Relab12", "Relab13", 
                   "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
-                  "Relab110", "Relab111", "Relab112", "Relab113")]
+                  "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                  "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                  "Relab22", "Relab23", 
+                  "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                  "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                  "prop_Desocupados_pet", "Horas_Hogar")]
+
+############################Modelos 2
+x_train_s = train_s_under[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
+                            "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "Relab12", "Relab13", 
+                            "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                            "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                            "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                            "Relab22", "Relab23", 
+                            "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                            "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                            "prop_Desocupados_pet", "Horas_Hogar")]
+x_train_s2 = train_s[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
+                       "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "Relab12", "Relab13", 
+                       "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                       "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                       "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                       "Relab22", "Relab23", 
+                       "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                       "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                       "prop_Desocupados_pet", "Horas_Hogar")]
+
+x_test = test_s[c("P6040", "age2", "jefe_mujer1", "max_edu_lev_h2", "max_edu_lev_h3",
+                  "max_edu_lev_h4", "max_edu_lev_h5", "max_edu_lev_h6", "Relab12", "Relab13", 
+                  "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                  "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                  "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                  "Relab22", "Relab23", 
+                  "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                  "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                  "prop_Desocupados_pet", "Horas_Hogar")]
+
+
+#####################################Modelos3
+
+train$años_educ_promedio
+
+x_train_s = train_s_under[c("P6040", "age2", "jefe_mujer1", "Relab12", "Relab13", 
+                            "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                            "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                            "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                            "Relab22", "Relab23", 
+                            "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                            "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                            "prop_Desocupados_pet", "Horas_Hogar", "años_educ_promedio")]
+x_train_s2 = train_s[c("P6040", "age2", "jefe_mujer1", "Relab12", "Relab13", 
+                       "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                       "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                       "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                       "Relab22", "Relab23", 
+                       "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                       "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                       "prop_Desocupados_pet", "Horas_Hogar", "años_educ_promedio")]
+
+x_test = test_s[c("P6040", "age2", "jefe_mujer1", "Relab12", "Relab13", 
+                  "Relab14", "Relab15", "Relab16", "Relab17", "Relab18", "Relab19",
+                  "Relab110", "Relab111", "Relab112", "recibe_arriendos1",
+                  "P50902", "P50903", "P50904", "P50905", "P50906", "Clase2",
+                  "Relab22", "Relab23", 
+                  "Relab24", "Relab25", "Relab26", "Relab27", "Relab28", "Relab29",
+                  "Relab210", "Relab211", "Relab212", "Relab213", "prop_cotiza",
+                  "prop_Desocupados_pet", "Horas_Hogar", "años_educ_promedio")]
+
+
 
 #Lasso y Ridge para regresión lineal
+#Primero se corre ridge
 # Ridge. Alpha = 0
 modelo_ridge <- glmnet(
   x = x_train_s,
@@ -227,13 +310,15 @@ modelo_ridge <- glmnet(
 )
 
 
-
+#Predicción y en el train
 y_hat_train_ridge <- predict(modelo_ridge, 
                               newx = as.matrix(x_train_s))
 
+#Predicción y en el test
 y_hat_test_ridge <- predict(modelo_ridge, 
                        newx = as.matrix(x_test))
 
+#Predicción pobre en el test (del)
 p_hat_test <- ifelse(exp(predict(modelo_ridge, newx = as.matrix(x_test)))/test_s$Npersug < test_s$Lp,1,0)
   
   
@@ -241,6 +326,7 @@ p_hat_test <- ifelse(exp(predict(modelo_ridge, newx = as.matrix(x_test)))/test_s
 lambdas_ridge <- modelo_ridge$lambda
 
 #Validación cruzada
+#Vamos a intentar escoger el modelo que maximice el recall
 resultados_ridge <- data.frame()
 for (i in 1:length(lambdas_ridge)) {
   lreg <- lambdas_ridge[i]
@@ -261,19 +347,30 @@ for (i in 1:length(lambdas_ridge)) {
   resultados_ridge <- bind_rows(resultados_ridge, resultado)
 }
 
-ggplot(resultados_ridge, aes(x = Lambda, y = RMSE)) +
-  geom_point() +
-  geom_line() +
-  theme_bw() +
-  scale_y_continuous(labels = scales::comma)
-
-
-filtro <- resultados_ridge$RMSE == min(resultados_ridge$RMSE)
-mejor_lambda_ridge <- resultados_ridge[filtro, "Lambda"]
+#Ver cuál es el recall máximo
 
 filtro_recall <- resultados_ridge$RECAL == max(resultados_ridge$RECAL)
-mejor_lambda_ridge_recall <- resultados_ridge[filtro_recall, "Lambda"]
+mejor_lambda_ridge_recall <- resultados_ridge[filtro_recall, "Lambda"]  #0.005
 
+#Prediciones en el train
+y_hat_in3 <- predict.glmnet(modelo_ridge,
+                             newx = as.matrix(x_train_s2),
+                             s = mejor_lambda_ridge_recall)
+
+
+y_hat_in3 <- as.data.frame(y_hat_in3)
+y_hat_in3$ingtot <- exp(y_hat_in3$s1)
+y_hat_in3$Lp <- train_s$Lp
+y_hat_in3$Pobre <- train_s$Pobre1
+y_hat_in3$Npersug <- train_s$Npersug
+y_hat_in3$Pred_Pobre <- ifelse(y_hat_in3$ingtot/y_hat_in3$Npersug < y_hat_in3$Lp, 1, 0)
+
+cm_lmridge_train <- confusionMatrix(data=factor(y_hat_in3$Pred_Pobre) , 
+                                   reference=factor(y_hat_in3$Pobre) , 
+                                   mode="sens_spec" , positive="1")
+cm_lmridge_train
+
+#Predicciones en el test
 y_hat_out3 <- predict.glmnet(modelo_ridge,
                              newx = as.matrix(x_test),
                              s = mejor_lambda_ridge_recall)
@@ -291,7 +388,253 @@ cm_lmridge_test <- confusionMatrix(data=factor(y_hat_out3$Pred_Pobre) ,
                           mode="sens_spec" , positive="1")
 cm_lmridge_test
 
+
+
+#Con lo anterior tenemos un sentitivity de 0.78 y un specificity de 0.84
+
+
+#Gráfico de los mejores lambda
+ggplot(resultados_ridge, aes(x = Lambda, y = RECAL)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  scale_y_continuous(labels = scales::comma)
+
+#¿Qué hubiera pasado si lo corriamos con lambda = 0?
+y_hat_out0 <- predict.glmnet(modelo_ridge,
+                             newx = as.matrix(x_test),
+                             s = 0.0)
+
+
+y_hat_out0 <- as.data.frame(y_hat_out0)
+y_hat_out0$ingtot <- exp(y_hat_out0$s1)
+y_hat_out0$Lp <- test_s$Lp
+y_hat_out0$Pobre <- test_s$Pobre1
+y_hat_out0$Npersug <- test_s$Npersug
+y_hat_out0$Pred_Pobre <- ifelse(y_hat_out0$ingtot/y_hat_out0$Npersug < y_hat_out0$Lp, 1, 0)
+
+cm_lmridge_test0 <- confusionMatrix(data=factor(y_hat_out0$Pred_Pobre) , 
+                                   reference=factor(y_hat_out0$Pobre) , 
+                                   mode="sens_spec" , positive="1")
+cm_lmridge_test0
+
+#Con lo anterior (lambda en 0, modelo original) tenemos un sentitivity de 0.78 y un specificity de 0.84
+#Mejora ligeramente pero da casi lo mismo
+
+
+
+
+
+#Segundo, se corre lasso
+# Lasso. Alpha = 1
+modelo_lasso <- glmnet(
+  x = x_train_s,
+  y = y_train,
+  alpha = 1,
+  lambda = seq(0,5,0.001),
+  standardize = FALSE
+)
+
+
+
+y_hat_train_lasso <- predict(modelo_lasso, 
+                             newx = as.matrix(x_train_s))
+
+y_hat_test_lasso <- predict(modelo_lasso, 
+                            newx = as.matrix(x_test))
+
+p_hat_test_lasso <- ifelse(exp(predict(modelo_lasso, newx = as.matrix(x_test)))/test_s$Npersug < test_s$Lp,1,0)
+
+
+#Lambdas del modelo ridge
+lambdas_lasso <- modelo_lasso$lambda
+
+#Validación cruzada
+#Vamos a intentar escoger el modelo que maximice el recall
+resultados_lasso <- data.frame()
+for (i in 1:length(lambdas_lasso)) {
+  lreg <- lambdas_lasso[i]
+  y_hat_test_pred_lasso <- y_hat_test_lasso[, i]
+  p_hat_test_pred_lasso <- p_hat_test_lasso[, i]
+  r23 <- R2_Score(y_pred = y_hat_test_pred_lasso, y_true = y_test)
+  rmse3 <- RMSE(y_pred = y_hat_test_pred_lasso, y_true = y_test)
+  cm_lasso_test <- confusionMatrix(data=factor(p_hat_test_pred_lasso) , 
+                                   reference=factor(p_test) , 
+                                   mode="sens_spec" , positive="1")
+  recall <- cm_lasso_test$byClass[[1]]
+  resultado <- data.frame(Modelo = "Ridge",
+                          Muestra = "Fuera",
+                          Lambda = lreg,
+                          R2_Score = r23, 
+                          RMSE = rmse3,
+                          RECAL = recall)
+  resultados_lasso <- bind_rows(resultados_lasso, resultado)
+}
+
+#Ver cuál es el recall máximo
+
+filtro_recall_lasso <- resultados_lasso$RECAL == max(resultados_lasso$RECAL)
+mejor_lambda_lasso_recall <- resultados_lasso[filtro_recall_lasso, "Lambda"]  #0.0
+
+#Prediciones en el train
+y_hat_inlasso <- predict.glmnet(modelo_lasso,
+                            newx = as.matrix(x_train_s2),
+                            s = mejor_lambda_lasso_recall)
+
+
+y_hat_inlasso <- as.data.frame(y_hat_inlasso)
+y_hat_inlasso$ingtot <- exp(y_hat_inlasso$s1)
+y_hat_inlasso$Lp <- train_s$Lp
+y_hat_inlasso$Pobre <- train_s$Pobre1
+y_hat_inlasso$Npersug <- train_s$Npersug
+y_hat_inlasso$Pred_Pobre <- ifelse(y_hat_inlasso$ingtot/y_hat_inlasso$Npersug < y_hat_inlasso$Lp, 1, 0)
+
+cm_lmlasso_train <- confusionMatrix(data=factor(y_hat_inlasso$Pred_Pobre) , 
+                                    reference=factor(y_hat_inlasso$Pobre) , 
+                                    mode="sens_spec" , positive="1")
+cm_lmlasso_train
+
+#Predicciones en el test
+y_hat_outlasso <- predict.glmnet(modelo_lasso,
+                             newx = as.matrix(x_test),
+                             s = mejor_lambda_lasso_recall)
+
+
+y_hat_outlasso <- as.data.frame(y_hat_outlasso)
+y_hat_outlasso$ingtot <- exp(y_hat_outlasso$s1)
+y_hat_outlasso$Lp <- test_s$Lp
+y_hat_outlasso$Pobre <- test_s$Pobre1
+y_hat_outlasso$Npersug <- test_s$Npersug
+y_hat_outlasso$Pred_Pobre <- ifelse(y_hat_outlasso$ingtot/y_hat_outlasso$Npersug < y_hat_outlasso$Lp, 1, 0)
+
+cm_lmlasso_test <- confusionMatrix(data=factor(y_hat_outlasso$Pred_Pobre) , 
+                                   reference=factor(y_hat_outlasso$Pobre) , 
+                                   mode="sens_spec" , positive="1")
+cm_lmlasso_test
+
+
+
+#Con lo anterior tenemos un sentitivity de 0.78 y un specificity de 0.84
+
+
+#Gráfico de los mejores lambda
+ggplot(resultados_ridge, aes(x = Lambda, y = RECAL)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  scale_y_continuous(labels = scales::comma)
+
+#¿Qué hubiera pasado si lo corriamos con lambda = 0?
+y_hat_out0 <- predict.glmnet(modelo_ridge,
+                             newx = as.matrix(x_test),
+                             s = 0.0)
+
+
+y_hat_out0 <- as.data.frame(y_hat_out0)
+y_hat_out0$ingtot <- exp(y_hat_out0$s1)
+y_hat_out0$Lp <- test_s$Lp
+y_hat_out0$Pobre <- test_s$Pobre1
+y_hat_out0$Npersug <- test_s$Npersug
+y_hat_out0$Pred_Pobre <- ifelse(y_hat_out0$ingtot/y_hat_out0$Npersug < y_hat_out0$Lp, 1, 0)
+
+cm_lmridge_test0 <- confusionMatrix(data=factor(y_hat_out0$Pred_Pobre) , 
+                                    reference=factor(y_hat_out0$Pobre) , 
+                                    mode="sens_spec" , positive="1")
+cm_lmridge_test0
+
+#Con lo anterior (lambda en 0, modelo original) tenemos un sentitivity de 0.78 y un specificity de 0.84
+#Mejora ligeramente pero da casi lo mismo
+
+
+
+#Probemos algo:
+y_train <- as.data.frame(y_train)
+train_unido <- cbind(y_train, x_train_s)
+
+modelo <- lm(y_train ~ . + P6040*jefe_mujer1 + age2*jefe_mujer1
+             +jefe_mujer1*Relab12+jefe_mujer1*Relab13+jefe_mujer1*Relab14+
+               jefe_mujer1*Relab15+jefe_mujer1*Relab16+jefe_mujer1*Relab17+
+               jefe_mujer1*Relab18 + jefe_mujer1*Relab19+jefe_mujer1*Relab110+
+               jefe_mujer1*Relab111+jefe_mujer1*Relab112, data = train_unido)
+summary(modelo)
+
+insamplep <- predict(modelo, train_s)
+
+
+
+#Dentro de muestra
+resultadosp <- train_s%>%select(Ingtotugarr, Pobre1, Npersug, Lp)
+resultadosp$pred_lm <- exp(insamplep)
+resultadosp$pobre_lm <- ifelse(resultadosp$pred_lm/resultadosp$Npersug <= resultadosp$Lp, 1, 0)
+
+
+cm_lmp <- confusionMatrix(data=factor(resultadosp$pobre_lm) , 
+                         reference=factor(resultadosp$Pobre) , 
+                         mode="sens_spec" , positive="1")
+cm_lmp
+
 names(data)
+
+
+#######################################LOGIT
+
+
+p_train <- as.data.frame(p_train)
+train_unido_logit <- cbind(p_train, x_train_s)
+
+# Establece el k-fold cv
+trctrl <- trainControl(method = "cv",number=10)
+
+# primero vamos con ridge
+enetFit <- train(p_train~., data = train_unido_logit, 
+                 method = "glmnet",
+                 trControl=trctrl,
+                 # alpha and lambda paramters to try
+                 tuneGrid = data.frame(alpha=0,
+                                       lambda=seq(0,1,0.01)))
+plot(varImp(enetFit),top=10)
+
+# Mejor alpha
+enetFit$bestTune #0.02
+
+# métricas
+class.res <- predict(enetFit,x_test)
+confusionMatrix(class.res, p_test, mode="sens_spec" , positive="1")
+
+
+
+
+#Sigue Lasso
+enetFitLasso <- train(p_train~., data = train_unido_logit, 
+                 method = "glmnet",
+                 trControl=trctrl,
+                 # alpha and lambda paramters to try
+                 tuneGrid = data.frame(alpha=1,
+                                       lambda=seq(0,1,0.01)))
+
+
+# Mejor alpha
+enetFitLasso$bestTune #0
+
+# métricas
+class.resLasso <- predict(enetFitLasso,x_test)
+confusionMatrix(class.resLasso, p_test, mode="sens_spec" , positive="1")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Logit
 logit <- glm(formula = Pobre1 ~ . -Clase1-log_ingtot-Lp-Ingtotugarr, family=binomial(link="logit") , data=train_s_under)
