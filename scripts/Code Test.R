@@ -38,9 +38,9 @@ test_personas <- readRDS("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/d
 #Importar archivos Samuel
 
 train_hogares <- readRDS("data/train_hogares.Rds")
-test_hogares <- readRDS("data/test_hogares.Rds")
-
 train_personas <- readRDS("data/train_personas.Rds")
+
+test_hogares <- readRDS("data/test_hogares.Rds")
 test_personas <- readRDS("data/test_personas.Rds")
 
 
@@ -112,12 +112,17 @@ Desocupados_Hogar_test <- test_personas%>%mutate(Desocupados = ifelse(is.na(Des)
 #Cantidad de personas en edad de trabajar
 Pet_Hogar_test <- test_personas%>%mutate(PobEdTrab = ifelse(is.na(Pet),0,Pet))%>%group_by(id)%>%summarise(Num_pet_hogar = sum(PobEdTrab))
 
-
+#############################
+####### no funciona #########
+#############################
 
 #Se busca hacer un "pivot" de aquellas variables que pueden resultar útil tener para más de un individuo del hogar
 
 if_else(is.na(P6430),if_else(is.na(Des), 11, 12),as.double(P6430))
 
+#############################
+#############################
+#############################
 
 #Inicialmente con la relación laboral
 #10 hace referencia a individuos estudiando, 11 a inactivos no estudiando, 12 a desocupados
@@ -223,7 +228,7 @@ test_completa <- full_join(test_completa, test_p_jef_muj)
 test_completa <- full_join(test_completa, test_p_edadjefe)
 test_completa <- full_join(test_completa, test_p_jefecotiza)
 test_completa <- full_join(test_completa, test_p_jef_ocu)
-test_completa <- full_join(test_completa, union_horas)
+test_completa <- full_join(test_completa, union_horas) ##NO CORRIO
 test_completa <- full_join(test_completa, test_p_adulto_maxlev_edu)
 
 #Hay solo 3 en No sabe, no responde, arbitrariamente los clasificaré en "Ninguno"
@@ -278,59 +283,60 @@ test_completa <- read.csv("test_completa.csv")
 ########### NO ESTOY SEGURO ##############
 ##########################################
 
-write.csv(reshape_miembros, "reshapemiembros.csv")
-reshape_miembros <- read.csv("reshapemiembros.csv")
+write.csv(reshape_miembros, "reshapemiembrostest.csv")
+reshape_miembros_test <- read.csv("reshapemiembrostest.csv")
 
-#Se anexan aquellas variables que faltaba anexar (Luego pasar esto arriba)
+# Corrección educación
 
-setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning")
+test_completa <- test_completa %>%
+  mutate(años_educ1 = case_when(Educ1 == 1 ~ 0,
+                                Educ1 == 2 ~ 2,
+                                Educ1 == 3 ~ 7,
+                                Educ1 == 4 ~ 10,
+                                Educ1 == 5 ~ 13,
+                                Educ1 == 6 ~ 18,
+                                Educ1 == 9 ~ 0))
 
+test_completa<- test_completa %>%
+  mutate(años_educ2 = case_when(Educ2 == 1 ~ 0,
+                                Educ2 == 2 ~ 2,
+                                Educ2 == 3 ~ 7,
+                                Educ2 == 4 ~ 10,
+                                Educ2 == 5 ~ 13,
+                                Educ2 == 6 ~ 18,
+                                Educ2 == 9 ~ 0))
 
+test_completa <- test_completa %>%
+  mutate(años_educ3 = case_when(Educ3 == 1 ~ 0,
+                                Educ3 == 2 ~ 2,
+                                Educ3 == 3 ~ 7,
+                                Educ3 == 4 ~ 10,
+                                Educ3 == 5 ~ 13,
+                                Educ3 == 6 ~ 18,
+                                Educ3 == 9 ~ 0))
 
-#Adicionales
+test_completa$años_educ_promedio <- rowMeans(subset(test_completa, select= c("años_educ1", "años_educ2", "años_educ3")),na.rm=TRUE)
 
 #Alguien recibe arriendo
-train_p$P7495 <- 2 - train_p$P7495
+test_personas$P7495 <- 2 - test_personas$P7495
 
-train_arriendo <- train_p%>%subset(P6040>=10)%>%group_by(id)%>%summarise(suma = sum(P7495, na.rm = TRUE))%>%mutate(recibe_arriendos = ifelse(suma > 0, 1, 0))
+test_arriendo <- test_personas%>%subset(P6040>=10)%>%group_by(id)%>%summarise(suma = sum(P7495, na.rm = TRUE))%>%mutate(recibe_arriendos = ifelse(suma > 0, 1, 0))
 
-
-data <- read.csv("train_completa.csv")
-
-data <- full_join(data, train_arriendo)
+test_completa <- full_join(test_completa, test_arriendo)
 
 
-names(data)
-data$Valor_Arriendo <- ifelse(is.na(data$P5130),data$P5140, data$P5130)
-data <- data[-c(1:5,12:14,17,19,21)]
+names(test_completa)
+test_completa$Valor_Arriendo <- ifelse(is.na(test_completa$P5130),test_completa$P5140, test_completa$P5130)
 
-#Las variables que son factores ponerlas como factores
-names(data)
 #Edad del jefe del hogar al cuadrado
-data$age2 <- data$P6040^2
+test_completa$age2 <- test_completa$P6040^2
 #data$age_mujer <- data$P6040*data$jefe_mujer
 #data$age2_mujer <- data$age2*data$jefe_mujer
 
-categoricas <- c("Pobre", "Clase", "Dominio", "P5090", "Depto", "jefe_mujer", "P6090", "jefe_cotiza", "relab_jefe",
-                 "P6090", "jefe_cotiza", "relab_jefe", "max_edu_lev_h", "max_empl", "Relab1", "Relab2", "Relab3",
-                 "Educ1", "Educ2", "Educ3", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen",
-                 "recibe_arriendos")
 
-data$Cant_cotiza_recibe
-data$Num_pet_hogar
-
-View(data%>%select("id","Cant_cotiza_recibe", "Num_pet_hogar", "prop_cotiza"))
-
-for (var in categoricas) {
-  data[,var] <- as.factor(data[,var, drop = TRUE])
-}
+test_completa$prop_cotiza <- test_completa$Cant_cotiza_recibe/test_completa$Num_pet_hogar
+test_completa$ppc <- test_completa$Nper/test_completa$P5010
 
 
-data$prop_cotiza <- data$Cant_cotiza_recibe/data$Num_pet_hogar
-data$ppc <- data$Nper/data$P5010
-
-
-write.csv(data, "train_completa.csv")
+write.csv(data, "test_completa.csv")
 #Revisar si vale la pena agregar si reciben ingresos por arriendos
-
-
