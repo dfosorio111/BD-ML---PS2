@@ -170,7 +170,7 @@ reshape_relab$`3` <- ifelse(is.na(reshape_relab$`3`),0,reshape_relab$`3`)
 colnames(reshape_relab) <- c("id", "Relab1", "Relab2", "Relab3")
 
 #Nivel educativo
-#Los NA del nivel educativo se ponen 0 porque todos hacen referencia a personas menores de edad no ocupados se les dará un valor de 10 (da igual porque es categórica.
+#Los NA del nivel educativo se ponen porque todos hacen referencia a personas menores de edad no ocupados se les dará un valor de 10 (da igual porque es categórica.
 
 train_p%>%subset(P6040 >= 18)%>%count(P6210)
 train_p%>%subset(Oc == 1)%>%count(P6210)
