@@ -216,9 +216,13 @@ for (i in 1:nrow(reshape_miembros)) {
   }
 }
 
+reshape_miembros_test <- reshape_miembros%>%select("id", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen")
 
+write.csv(reshape_miembros_test, "reshapemiembrostest.csv")
+reshape_miembros_test <- read.csv("reshapemiembrostest.csv")
 
-reshape_miembros <- reshape_miembros%>%select("id", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen")
+#Seadiciona los miembros que viven con esas personas
+test_completa <- full_join(test_completa, reshape_miembros_test)
 
 #Merge de personas y hogares
 
@@ -228,7 +232,7 @@ test_completa <- full_join(test_completa, test_p_jef_muj)
 test_completa <- full_join(test_completa, test_p_edadjefe)
 test_completa <- full_join(test_completa, test_p_jefecotiza)
 test_completa <- full_join(test_completa, test_p_jef_ocu)
-test_completa <- full_join(test_completa, union_horas) ##NO CORRIO
+test_completa <- full_join(test_completa, union_horas_test)
 test_completa <- full_join(test_completa, test_p_adulto_maxlev_edu)
 
 #Hay solo 3 en No sabe, no responde, arbitrariamente los clasificaré en "Ninguno"
@@ -249,11 +253,6 @@ test_completa <- full_join(test_completa, reshape_educ)
 #Se añade la cantidad de personas que cotiza o recibe pensión en el hogar
 test_completa <- full_join(test_completa, reshape_pension)
 
-#Seadiciona los miembros que viven con esas personas
-test_completa <- full_join(test_completa, reshape_miembros)
-
-
-
 #La P6090 tiene unos NA pero son niños, entonces se les pondrá que no están en seguridad social en salud
 test_completa%>%count(P6090)
 test_completa$P6090 <- ifelse(is.na(test_completa$P6090), 2, test_completa$P6090)
@@ -270,21 +269,6 @@ test_completa%>%count(prop_Desocupados_pet)
 #Mujeres
 test_completa$prop_mujeres_total <- test_completa$num_mujeres/test_completa$Nper
 test_completa$prop_mujeres_pet <- test_completa$num_mujeres/test_completa$Num_pet_hogar
-
-#Guardar base
-
-write.csv(test_completa, "test_completa.csv")
-
-#Abrir base
-
-test_completa <- read.csv("test_completa.csv")
-
-##########################################
-########### NO ESTOY SEGURO ##############
-##########################################
-
-write.csv(reshape_miembros, "reshapemiembrostest.csv")
-reshape_miembros_test <- read.csv("reshapemiembrostest.csv")
 
 # Corrección educación
 
@@ -324,8 +308,6 @@ test_arriendo <- test_personas%>%subset(P6040>=10)%>%group_by(id)%>%summarise(su
 
 test_completa <- full_join(test_completa, test_arriendo)
 
-
-names(test_completa)
 test_completa$Valor_Arriendo <- ifelse(is.na(test_completa$P5130),test_completa$P5140, test_completa$P5130)
 
 #Edad del jefe del hogar al cuadrado
@@ -337,8 +319,9 @@ test_completa$age2 <- test_completa$P6040^2
 test_completa$prop_cotiza <- test_completa$Cant_cotiza_recibe/test_completa$Num_pet_hogar
 test_completa$ppc <- test_completa$Nper/test_completa$P5010
 
-
-test_completa <- full_join(test_completa, reshape_miembros_test)
-
+#Guardar base
 write.csv(test_completa, "test_completa.csv")
-#Revisar si vale la pena agregar si reciben ingresos por arriendos
+
+#Abrir base
+
+test_completa <- read.csv("test_completa.csv")
