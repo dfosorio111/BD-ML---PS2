@@ -110,7 +110,7 @@ names(train_s)
 
 
 #write.csv(train_s,"train_s.csv")
-#write.csv(train_s,"tets_s.csv")
+#write.csv(test_s,"test_s.csv")
 
 #Se crean pobre como factores
 train_s$Pobre1 <- factor(train_s$Pobre1)
@@ -563,6 +563,7 @@ x_test_inter <- sparse.model.matrix(y_test~.^2, data = test_unido)[,-1]
 
 y_train <- train_s_under[,"log_ingtot"]
 
+#Se crea el modelo
 modelo_lasso_inter <- glmnet(
   x = matriz_inter,
   y = y_train,
@@ -572,7 +573,7 @@ modelo_lasso_inter <- glmnet(
 )
 
 
-
+#Se predicen los resultados
 y_hat_test_lasso_inter <- predict(modelo_lasso_inter, 
                             newx = as.matrix(x_test_inter))
 
@@ -583,6 +584,8 @@ p_hat_test_lasso_inter <- ifelse(exp(predict(modelo_lasso_inter, newx = as.matri
 #Lambdas del modelo ridge
 lambdas_lasso_int <- modelo_lasso_inter$lambda
 
+
+#Se hace el cilclo para escoger
 resultados_lasso_int <- data.frame()
 for (i in 1:length(lambdas_lasso_int)) {
   lreg <- lambdas_lasso_int[i]
@@ -682,7 +685,7 @@ cm_lmp
 names(data)
 
 
-#######################################LOGIT Ridge
+#######################################LOGIT Lasso Ridge
 
 p_train <- as.data.frame(p_train)
 p_train$p_train <- as.factor(p_train$p_train)
@@ -690,24 +693,29 @@ train_unido_logit <- cbind(p_train, x_train_s)
 
 
 #Se crean la x y la y para los modelos
-x <- model.matrix(p_train~., data = train_unido_logit)[,-1]
-
+x <- model.matrix(p_train~(.)^2, data = train_unido_logit)[,-1]
 y <- ifelse(p_train$p_train == 1, 1, 0)
 
 #escoger el valor de lambda para lasso y ridge
 cv.lasso <- cv.glmnet(x, y, alpha = 1, family =  "binomial")
-cv.ridge <- cv.glmnet(x, y, alpha = 0, family =  "binomial")
+#cv.ridge <- cv.glmnet(x, y, alpha = 0, family =  "binomial")
 
 #Modelo de lasso o ridge
-model <- glmnet(x, y, alpha = 1, family = "binomial",
-                lambda = cv.lasso$lambda.min)
+model <- glmnet(x, y, alpha = 1, binomial(link="logit"),
+                lambda = cv.lasso)
 
+lambdas <- model$lambda
 #predicción en el test
 p_train <- train_s_under[,"Pobre1"]
 p_test <- test_s[,"Pobre1"]
 test_unido_logit <- cbind(p_test, x_test)
-x.test <- model.matrix(p_test ~., test_unido_logit)[,-1]
-probabilities <- predict(model, newx = x.test, type = "response")
+x.test <- model.matrix(p_test ~(.)^2, test_unido_logit)[,-1]
+
+
+probabilities_test <- predict(model, newx = x.test, type = "response")
+
+min(probabilities_test[,20])
+
 
 #escogencia de la regla óptima
 rules <- seq(0.1,0.5,0.01)
@@ -715,23 +723,22 @@ ponderado <- data.frame()
 i <- 0
 #Ciclo itera sobre diversos valores de la regla y escoge la que da el máximo ponderado
 for (rule in rules) {
-  
-  i <- i+1
-  predicciones <- ifelse(probabilities > rule, 1, 0)
-  predicciones <- as.data.frame(predicciones)
-  resultados_log <- predicciones
-  resultados_log <- data.frame(resultados_log)
-  resultados_log$real <- p_test
-  
-  CM <- confusionMatrix(as.factor(resultados_log$s0), resultados_log$real, mode="sens_spec" , positive="1")
-  ponderado[i,1] <- rule
-  #peso de 75% a sensitivity y 25% a specificity
-  ponderado[i,2] <- CM$byClass[1]*0.75+CM$byClass[2]*0.25
-  
+  for (j in length(lambdas)) {
+    i <- i+1
+    predicciones <- ifelse(probabilities_test[,j] > rule, 1, 0)
+    predicciones <- as.data.frame(predicciones)
+    resultados_log <- predicciones
+    resultados_log <- data.frame(resultados_log)
+    resultados_log$real <- p_test
+    CM <- confusionMatrix(data = as.factor(resultados_log$s0), reference = resultados_log$real, mode="sens_spec" , positive="1")
+    ponderado[i,1] <- rule
+    ponderado[i,2] <- lambdas[,j]
+    #peso de 75% a sensitivity y 25% a specificity
+    ponderado[i,2] <- CM$byClass[1]*0.75+CM$byClass[2]*0.25 
+  }
 }
 #se escoge la que da el ponderado más alto
 optimal_rule <- ponderado[which.max(ponderado$V2),1]
-
 
 
 
@@ -797,7 +804,6 @@ confusionMatrix(class.resLasso, p_test, mode="sens_spec" , positive="1")
 
 #Logit
 logit <- glm(formula = Pobre1 ~ . -Clase1-log_ingtot-Lp-Ingtotugarr, family=binomial(link="logit") , data=train_s_under)
-tidy(logit)
 resultados$pobre_log <- predict(logit , newdata=train_s, type="response")
 
 rule <- 0.5
