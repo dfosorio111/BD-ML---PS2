@@ -689,30 +689,31 @@ p_train$p_train <- as.factor(p_train$p_train)
 train_unido_logit <- cbind(p_train, x_train_s)
 
 
+#Se crean la x y la y para los modelos
 x <- model.matrix(p_train~., data = train_unido_logit)[,-1]
 
 y <- ifelse(p_train$p_train == 1, 1, 0)
 
-
+#escoger el valor de lambda para lasso y ridge
 cv.lasso <- cv.glmnet(x, y, alpha = 1, family =  "binomial")
-
 cv.ridge <- cv.glmnet(x, y, alpha = 0, family =  "binomial")
 
-
+#Modelo de lasso o ridge
 model <- glmnet(x, y, alpha = 1, family = "binomial",
                 lambda = cv.lasso$lambda.min)
 
+#predicción en el test
 p_train <- train_s_under[,"Pobre1"]
 p_test <- test_s[,"Pobre1"]
 test_unido_logit <- cbind(p_test, x_test)
 x.test <- model.matrix(p_test ~., test_unido_logit)[,-1]
 probabilities <- predict(model, newx = x.test, type = "response")
 
-
+#escogencia de la regla óptima
 rules <- seq(0.1,0.5,0.01)
 ponderado <- data.frame()
 i <- 0
-
+#Ciclo itera sobre diversos valores de la regla y escoge la que da el máximo ponderado
 for (rule in rules) {
   
   i <- i+1
@@ -724,10 +725,11 @@ for (rule in rules) {
   
   CM <- confusionMatrix(as.factor(resultados_log$s0), resultados_log$real, mode="sens_spec" , positive="1")
   ponderado[i,1] <- rule
+  #peso de 75% a sensitivity y 25% a specificity
   ponderado[i,2] <- CM$byClass[1]*0.75+CM$byClass[2]*0.25
   
 }
-
+#se escoge la que da el ponderado más alto
 optimal_rule <- ponderado[which.max(ponderado$V2),1]
 
 
