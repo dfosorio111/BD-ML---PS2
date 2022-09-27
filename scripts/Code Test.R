@@ -338,5 +338,7 @@ test_completa$prop_cotiza <- test_completa$Cant_cotiza_recibe/test_completa$Num_
 test_completa$ppc <- test_completa$Nper/test_completa$P5010
 
 
-write.csv(data, "test_completa.csv")
+test_completa <- full_join(test_completa, reshape_miembros_test)
+
+write.csv(test_completa, "test_completa.csv")
 #Revisar si vale la pena agregar si reciben ingresos por arriendos
