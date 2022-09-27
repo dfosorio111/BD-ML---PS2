@@ -24,6 +24,8 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
 
 data <- read.csv("train_completa.csv")
 
+
+# crear variables sobre la base
 data$prop_ocupados_pet <- ifelse(is.na(data$prop_ocupados_pet),0, data$prop_ocupados_pet)
 data$prop_Desocupados_pet <- ifelse(is.na(data$prop_Desocupados_pet),0, data$prop_Desocupados_pet)
 data$prop_cotiza <- ifelse(is.na(data$prop_cotiza),0, data$prop_cotiza)
@@ -32,7 +34,7 @@ data$prop_cotiza <- ifelse(is.na(data$prop_cotiza),0, data$prop_cotiza)
 # Check los NAs de la base
 sapply(data, function(x) sum(is.na(x)))
 
-#Revisemos qué variables tenemos
+# variables en la base
 names(data)
 
 # evaluar correlacion entre variables
@@ -41,23 +43,27 @@ cor(data$Cant_cotiza_recibe, data$prop_cotiza)
 
 
 
-#ingreso en logaritmo
+# crear nueva variables log_ingtot que es logaritmo del ingreso+1
 data$log_ingtot <- log(data$Ingtotugarr+1)
 
 
 is.na(data$P5100)%>%table()
 
+
+# crear diccionario de variables categoricas
 categoricas <- c("Pobre", "Clase", "Dominio", "P5090", "Depto", "jefe_mujer", "P6090", "jefe_cotiza", "relab_jefe",
                  "P6090", "jefe_cotiza", "relab_jefe", "max_edu_lev_h", "max_empl", "Relab1", "Relab2", "Relab3",
                  "Educ1", "Educ2", "Educ3", "hijos", "pareja", "nietos", "otros_parientes", "no_parientes", "emp_pen",
                  "recibe_arriendos")
 
+# convertir variables categoricas en factores
 for (var in categoricas) {
   data[,var] <- as.factor(data[,var, drop = TRUE])
 }
 
 names(data)
 data <- data[-c(1:9,11,15:18,20,22,24,29,31,38,42:45,52,54,57,58,60, 66:68)]
+
 
 #Se crea la matriz de dummys
 df <- model.matrix(~ .  - 1, data)%>%data.frame()
@@ -130,6 +136,7 @@ train_s_under <- as.data.frame(train_s_under)
 prop.table(table(train_s$Pobre1))
 prop.table(table(train_s_under$Pobre1))
 prop.table(table(test_s$Pobre1))
+
 
 
 y_train <- train_s_under[,"log_ingtot"]
