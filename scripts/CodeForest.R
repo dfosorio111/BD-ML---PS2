@@ -1,4 +1,5 @@
-## Arboles y Random Forest en R: Diego Osorio
+
+## Arboles, Random Forest, Ada y XGBoost en R: Diego Osorio
 
 #Limpiar el ambiente
 rm(list=ls())
@@ -10,6 +11,8 @@ setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data")
 #Samuel
 setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2/data")
 
+
+
 #UNI
 setwd("C:/Users/de.franco/Documents/diego")
 
@@ -17,7 +20,7 @@ setwd("C:/Users/de.franco/Documents/diego")
 
 #Importar paquetes y cargar librerías
 require(pacman)
-#install.packages()
+install.packages("xgboost")
 
 p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio, 
        vtable, stargazer, ggplot2, boot, MLmetrics, lfe,
@@ -25,7 +28,7 @@ p_load(tidyverse, rvest, data.table, dplyr, skimr, caret, rio,
        modelsummary, # tidy, msummary
        gamlr,        # cv.gamlr
        ROCR, # ROC curve
-       class, glmnet, janitor, doParallel, rattle, fastDummies, tidymodels, themis, AER)
+       class, glmnet, janitor, doParallel, rattle, fastDummies, tidymodels, themis, AER, randomForest,xgboost)
 
 
 data <- read.csv("train_completa.csv")
@@ -228,7 +231,23 @@ tree1 <- decision_tree()%>%
   set_mode("classification")
 
 
-# fit/train el modelo }
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+
+# Vamos a usar n_cores - 2 procesadores para esto
+cl <- makePSOCKcluster(n_cores - 1) 
+registerDoParallel(cl)
+
+
+
+# Liberamos nuestros procesadores
+stopCluster(cl)
+
+
+
+
+
+# fit/train el modelo 
 tree1_fit <- fit(tree1, p_train~. -Clase1-Pobre1-Lp-Ingtotugarr-log_ingtot, data = train_s_under)
 
 #formula = log_ingtot ~. -Clase1-Pobre1-Lp-Ingtotugarr , 
@@ -336,8 +355,23 @@ folds <- vfold_cv(train_s_under, strata = Pobre1, v =10)
 #avg <- metric_set(0.75*recall)
 
 #gridsearch
-
 set.seed(1232)
+
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+
+# Vamos a usar n_cores - 2 procesadores para esto
+cl <- makePSOCKcluster(n_cores - 1) 
+registerDoParallel(cl)
+
+
+
+# Liberamos nuestros procesadores
+stopCluster(cl)
+
+
+
+
 tree_tune1_cv <- tune_grid(
   tree_tune1,
   Pobre1 ~ . -Clase1-Pobre1-Lp-Ingtotugarr-log_ingtot,
@@ -424,6 +458,212 @@ cm_test_tree2
 
 
 
+# Random Forest
+
+set.seed(13342)
+
+
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+
+# Vamos a usar n_cores - 2 procesadores para esto
+cl <- makePSOCKcluster(n_cores - 1) 
+registerDoParallel(cl)
+
+
+
+# Liberamos nuestros procesadores
+stopCluster(cl)
+
+
+ctrl_rf <- trainControl(method = "cv",
+                        number = 5,
+                        summaryFunction = defaultSummary,
+                        classProbs = TRUE,
+                        verbose=FALSE,
+                        savePredictions = TRUE)
+
+rforest <- train(
+  p_train~. -Clase1-Pobre1-Lp-Ingtotugarr-log_ingtot,
+  data = train_s_under,
+  method ="rf",
+  trControl = ctrl_rf,
+  family = "binomial",
+  metric="Sens"
+)
+
+summary(rforest)
+
+
+
+# crear vector de predicciones
+
+y_hat_train_rf1 <- predict(rforest, train_s_under)
+y_hat_test_rf1 <- predict(rforest, test_s)
+
+# matriz de confusión
+
+cm_train_rf1 <- confusionMatrix(data= factor(y_hat_train_rf1),
+                                reference = factor(train_s_under$Pobre1),
+                                mode = "sens_spec",
+                                positive = "1")
+cm_train_rf1
+
+cm_test_rf1 <- confusionMatrix(data= factor(y_hat_test_rf1),
+                               reference = factor(train_s_under$Pobre1),
+                               mode = "sens_spec",
+                               positive = "1")
+
+cm_test_rf1
+
+
+# obtener feature importance
+
+fea_imp_rf1 <- varImp(rforest, scale=TRUE)
+
+
+
+
+
+# Ada Boost
+
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+
+# Vamos a usar n_cores - 2 procesadores para esto
+cl <- makePSOCKcluster(n_cores - 1) 
+registerDoParallel(cl)
+
+
+
+# Liberamos nuestros procesadores
+stopCluster(cl)
+
+
+
+
+
+set.seed(13342)
+ctrl_ada <- trainControl(method = "cv",
+                         number = 5,
+                         summaryFunction = defaultSummary,
+                         classProbs = TRUE,
+                         verbose=FALSE,
+                         savePredictions = TRUE)
+
+
+ada1 <- train(
+  p_train~. -Clase1-Pobre1-Lp-Ingtotugarr-log_ingtot,
+  data = train_s_under,
+  method ="adaboost",
+  trControl = ctrl_ada,
+  family = "binomial",
+  metric="Sens"
+)
+
+summary(ada1)
+
+
+# crear vector de predicciones
+
+y_hat_train_ada1 <- predict(ada1, train_s_under)
+y_hat_test_ada1 <- predict(ada1, test_s)
+
+# matriz de confusión
+
+cm_train_ada1 <- confusionMatrix(data= factor(y_hat_train_ada1),
+                                 reference = factor(train_s_under$Pobre1),
+                                 mode = "sens_spec",
+                                 positive = "1")
+cm_train_ada1
+
+cm_test_ada1 <- confusionMatrix(data= factor(y_hat_test_ada1),
+                                reference = factor(train_s_under$Pobre1),
+                                mode = "sens_spec",
+                                positive = "1")
+
+cm_test_ada1
+
+
+# obtener feature importance
+
+fea_imp_ada1 <- varImp(ada1, scale=TRUE)
+
+
+
+
+
+
+# XGBoost
+
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+
+# Vamos a usar n_cores - 2 procesadores para esto
+cl <- makePSOCKcluster(n_cores - 1) 
+registerDoParallel(cl)
+
+
+
+# Liberamos nuestros procesadores
+stopCluster(cl)
+
+ctrl_xgb <- trainControl(method = "cv",
+                         number = 5,
+                         summaryFunction = defaultSummary,
+                         classProbs = TRUE,
+                         verbose=FALSE,
+                         savePredictions = TRUE)
+
+set.seed(1233)
+grid_search_xgb <- expand.grid(nrounds = c(200,300,500),
+                               max_depth = c(4,6,8,10),
+                               eta = seq(0,1,0.1),
+                               gamma = c(0,1),
+                               min_child_weight = c(10,25,50),
+                               colsample_bytree = c(0.7),
+                               subsample = c(0.6)
+                               
+)
+
+xgb1 <- train(p_train~. -Clase1-Pobre1-Lp-Ingtotugarr-log_ingtot,
+              data = train_s_under,
+              method ="xgbTree",
+              trControl = ctrl_xgb,
+              metric="Sens",
+              tuneGrid = grid_search_xgb,
+              #preProcess = c("center", "scale")
+)
+
+
+summary(xgb1)
+
+
+# crear vector de predicciones
+
+y_hat_train_xgb1 <- predict(xgb1, train_s_under)
+y_hat_test_xgb1 <- predict(xgb1, test_s)
+
+
+# matriz de confusión
+
+cm_train_xgb1 <- confusionMatrix(data= factor(y_hat_train_xgb1),
+                                 reference = factor(train_s_under$Pobre1),
+                                 mode = "sens_spec",
+                                 positive = "1")
+cm_train_xgb1
+
+cm_test_xgb1 <- confusionMatrix(data= factor(y_hat_test_xgb1),
+                                reference = factor(train_s_under$Pobre1),
+                                mode = "sens_spec",
+                                positive = "1")
+
+cm_test_xgb1
+
+
+# obtener feature importance
+
+fea_imp_xgb1 <- varImp(xgb1, scale=TRUE)
 
 
 
