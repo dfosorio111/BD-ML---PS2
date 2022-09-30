@@ -6,9 +6,9 @@ rm(list=ls())
 #Daniel
 setwd("C:/Users/danie/OneDrive/Escritorio/Uniandes/PEG/Big Data and Machine Learning/BD-ML---PS2/data")
 #Diego
-setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2")
+setwd("C:/Users/Diego/OneDrive/Documents/GitHub/BD-ML---PS2/data")
 #Samuel
-setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2")
+setwd("~/Desktop/Big Data/Repositorios/BD-ML---PS2/data")
 
 #Se establece semilla
 set.seed(1000)
@@ -162,6 +162,20 @@ max(prueba$P6040)
 train_relab_def <- train_relab%>%select(id, Orden, relacion_lab)
 reshape_relab <- pivot_wider(train_relab_def, names_from = Orden, values_from = relacion_lab)
 
+
+reshape_relab_ninis <- data.frame()
+  
+for(i in 1:nrow(reshape_relab)){
+  
+  reshape_relab_ninis[i,] <- sum(reshape_relab[i,] == 11, na.rm = TRUE) 
+
+}
+
+reshape_relab_ninis$id <- reshape_relab$id
+
+
+
+
 reshape_relab <- reshape_relab%>%select("id", `1`, `2`, `3`)
 #Los NA son gente que no existe, esos no existe se les dará valor de 0
 reshape_relab$`2` <- ifelse(is.na(reshape_relab$`2`),0,reshape_relab$`2`)
@@ -257,6 +271,9 @@ train_completa <- full_join(train_completa, train_p_jef_ocu)
 train_completa <- full_join(train_completa, union_horas)
 train_completa <- full_join(train_completa, train_p_adulto_maxlev_edu)
 
+
+
+
 table(train_completa$Pobre, train_completa$max_edu_lev_h)
 
 #Hay solo 3 en No sabe, no responde, arbitrariamente los clasificaré en "Ninguno"
@@ -280,6 +297,8 @@ train_completa <- full_join(train_completa, reshape_pension)
 #Seadiciona los miembros que viven con esas personas
 train_completa <- full_join(train_completa, reshape_miembros)
 
+# Se adiciona el numero de NINIS por hogar
+train_completa <- full_join(train_completa, reshape_relab_ninis)
 
 
 #La P6090 tiene unos NA pero son niños, entonces se les pondrá que no están en seguridad social en salud
@@ -315,6 +334,7 @@ ggplot(data = train_completa, aes(x = factor(Pobre), y = P6040))+
 
 
 train_completa <- read.csv("train_completa.csv")
+
 train_completa$Ingpcug <- train_hogares$Ingpcug
 train_completa$Ingtotugarr <- train_hogares$Ingtotugarr
 write.csv(train_completa, "train_completa.csv")
